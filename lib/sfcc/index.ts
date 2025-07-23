@@ -77,7 +77,7 @@ async function getOrCreateCart(): Promise<Cart> {
   if (!userId) {
     throw new Error('User not authenticated. Please sign in to add items to your cart.');
   }
-
+  
   const userCart = await prisma.cart.findUnique({
     where: { userId },
     include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
@@ -460,7 +460,7 @@ export async function addPaymentMethod(paymentData: any): Promise<void> {
   console.log('Adding payment method (placeholder):', paymentData.cardholderName);
 }
 
-export async function placeOrder({ shippingAddress, email }: { shippingAddress: Address, email: string }): Promise<Order> {
+export async function placeOrder({ shippingAddress, email, contactNumber }: { shippingAddress: Address, email: string, contactNumber?: string }): Promise<Order> {
   const cart = await getCart();
   const userId = await getUserId();
 
@@ -483,7 +483,8 @@ export async function placeOrder({ shippingAddress, email }: { shippingAddress: 
       totalAmount: cart.totalAmount,
       totalTaxAmount: cart.totalTaxAmount,
       shippingAmount: cart.shippingAmount,
-      customerEmail: email, // This line was missing
+      customerEmail: email,
+      contactNumber: contactNumber,
       shippingAddress: formattedAddress,
       billingAddress: formattedAddress, // Assuming billing is same as shipping for now
       shippingMethod: 'Standard Shipping', // Placeholder
@@ -518,10 +519,10 @@ export async function placeOrder({ shippingAddress, email }: { shippingAddress: 
         selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
         product: {
           ...item.product,
-          images: [], // add empty array for images
-          options: [], // add empty array for options
-          variants: [], // add empty array for variants
-          collections: [], // add empty array for collections
+          images: [], 
+          options: [],
+          variants: [],
+          collections: [], 
         }
       }
     })),
@@ -606,10 +607,10 @@ export async function getOrders(): Promise<Order[]> {
         selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
         product: {
           ...item.product,
-          images: [], // add empty array for images
-          options: [], // add empty array for options
-          variants: [], // add empty array for variants
-          collections: [], // add null for collection
+          images: [],
+          options: [],
+          variants: [],
+          collections: [],
         }
       }
     })),

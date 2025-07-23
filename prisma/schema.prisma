@@ -64,6 +64,7 @@ model Order {
   totalTaxAmount  Float
   shippingAmount  Float
   customerEmail   String?
+  contactNumber   String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   userId          String

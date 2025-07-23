@@ -1,4 +1,4 @@
-// File: commerce/app/admin/orders/page.tsx
+// commerce/app/admin/orders/page.tsx
 
 import {
   Table,
@@ -24,6 +24,7 @@ export default async function AdminOrders() {
               <TableRow>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Contact Number</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
@@ -35,6 +36,7 @@ export default async function AdminOrders() {
                     {order.orderNumber}
                   </TableCell>
                   <TableCell>{order.customerEmail}</TableCell>
+                  <TableCell>{order.contactNumber || 'N/A'}</TableCell>
                   <TableCell>
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>

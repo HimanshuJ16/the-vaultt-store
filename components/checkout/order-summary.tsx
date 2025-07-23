@@ -57,7 +57,7 @@ export function OrderSummary({ cart }: { cart: Cart }) {
                   <p className="ml-4">${item.totalAmount}</p>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                    {item.merchandise.selectedOptions.find(o => o.name.toLowerCase() === 'size')?.value}
+                  Size(EUR): {item.merchandise.selectedOptions.find(o => o.name.toLowerCase() === 'size')?.value}
                 </p>
               </div>
               <div className="flex flex-1 items-end justify-between text-sm">

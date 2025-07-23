@@ -102,8 +102,9 @@ export async function placeOrderAction(prevState: any, formData: FormData) {
       country: formData.get('country') as string,
     };
     const email = formData.get('email') as string;
+    const contactNumber = formData.get('contactNumber') as string;
 
-    order = await placeOrder({ shippingAddress, email });
+    order = await placeOrder({ shippingAddress, email, contactNumber });
     if (!order) {
       return "Error placing order: Could not create order.";
     }

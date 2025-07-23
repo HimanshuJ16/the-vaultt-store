@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email(),
+  contactNumber: z.string().min(10, "Please enter a valid phone number"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   address: z.string().min(1, "Address is required"),
@@ -47,6 +48,7 @@ export function CheckoutForm({ user }: { user: UserData }) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             email: user?.email || "",
+            contactNumber: "",
             firstName: user?.firstName || "",
             lastName: user?.lastName || "",
             address: "",
@@ -84,16 +86,33 @@ export function CheckoutForm({ user }: { user: UserData }) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div>
           <h2 className="text-lg font-medium text-gray-900">Contact information</h2>
-          <div className="mt-4">
+          <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
             <FormField
               control={form.control}
               name="email"
-              disabled
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="sm:col-span-2">
                   <FormLabel>Email address</FormLabel>
                   <FormControl>
-                    <Input placeholder="your.email@example.com" {...field} />
+                    <Input
+                      placeholder="your.email@example.com"
+                      {...field}
+                      readOnly // Changed from disabled
+                      className="bg-gray-100 cursor-not-allowed" // Added styling
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="contactNumber"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Contact number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="Enter your contact number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -108,12 +127,11 @@ export function CheckoutForm({ user }: { user: UserData }) {
             <FormField
               control={form.control}
               name="firstName"
-              disabled
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>First name</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} readOnly className="bg-gray-100 cursor-not-allowed" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,12 +140,11 @@ export function CheckoutForm({ user }: { user: UserData }) {
             <FormField
               control={form.control}
               name="lastName"
-              disabled
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Last name</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} readOnly className="bg-gray-100 cursor-not-allowed" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
