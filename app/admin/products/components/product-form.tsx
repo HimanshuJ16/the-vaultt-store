@@ -31,7 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   handle: z.string().min(1, "Handle is required"),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().min(1, "Description is required").max(700, "Description should not be more than 700 characters"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
   collectionId: z.string().optional(),
   category: z.string().optional(),

@@ -110,7 +110,7 @@ export default async function ProductPage({
           </Suspense>
         </div>
 
-        <div className="col-span-5 flex flex-col 2xl:col-span-4 max-md:col-span-full max-md:p-sides md:pl-sides md:pt-top-spacing">
+        <div className="col-span-5 flex flex-col 2xl:col-span-4 max-md:col-span-full md:h-screen max-md:p-sides md:pl-sides md:pt-top-spacing sticky top-0">
           <div className="col-span-full">
             <Breadcrumb className="col-span-full mb-3 md:mb-8">
               <BreadcrumbList>
