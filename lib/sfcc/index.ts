@@ -15,9 +15,11 @@ import {
   ShippingMethod,
   ProductVariant,
   SelectedOptions,
+  OrderItem,
 } from './types';
 import { revalidateTag } from 'next/cache';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { Order as PrismaOrder, User as PrismaUser, OrderItem as PrismaOrderItem, Product as PrismaProduct, ProductVariant as PrismaProductVariant } from "@prisma/client";
 
 // Helper to get the user ID from cookies, assuming you set it upon login/session start
 export async function getUserId() {
@@ -623,6 +625,42 @@ export async function getOrders(): Promise<Order[]> {
   }));
 }
 
+export type DetailedOrder = PrismaOrder & {
+    user: PrismaUser | null;
+    items: (PrismaOrderItem & {
+        product: PrismaProduct;
+        productVariant: PrismaProductVariant | null;
+    })[];
+};
+
+/**
+ * Fetches a single order with its associated user and item details.
+ * This function returns a simplified object that directly matches the database structure,
+ * avoiding the complex reshaping that caused type errors.
+ *
+ * @param orderId The ID of the order to fetch.
+ * @returns A detailed order object, or null if not found.
+ */
+export async function getOrderDetails(orderId: string): Promise<DetailedOrder | null> {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        // Include the full user object to access name, email, etc.
+        user: true,
+        // Include the items and their nested product/variant details
+        items: {
+          include: {
+            product: true,
+            productVariant: true,
+          },
+        },
+      },
+    });
+
+    // The 'order' object from Prisma now perfectly matches our 'DetailedOrder' type.
+    // No complex reshaping is needed. We can just return it.
+    return order;
+}
 
 export async function getUsers() {
   return await prisma.user.findMany();

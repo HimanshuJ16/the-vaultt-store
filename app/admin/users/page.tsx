@@ -1,44 +1,17 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getUsers } from "@/lib/sfcc";
 import { PageLayout } from "@/components/layout/page-layout";
+import { DataTable } from "./components/data-table";
+import { columns } from "./components/columns";
 
-export default async function AdminUsers() {
+export default async function AdminUsersPage() {
   const users = await getUsers();
 
   return (
     <PageLayout>
-      <div className="p-4 sm:p-6 lg:p-8">
-        <h1 className="text-2xl font-bold mb-4">Users</h1>
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.fullName}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Users</h1>
         </div>
-      </div>
+        <DataTable columns={columns} data={users} />
     </PageLayout>
   );
 }
