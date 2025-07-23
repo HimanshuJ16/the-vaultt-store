@@ -4,6 +4,7 @@ import { Product } from "@/lib/sfcc/types"; // Updated import path
 import { AddToCart } from "@/components/cart/add-to-cart"; // Assuming this path is correct
 import { Suspense } from "react";
 import Link from "next/link";
+import { Button } from "../ui/button";
 
 export function FeaturedProductLabel({
   product,
@@ -41,7 +42,7 @@ export function FeaturedProductLabel({
             {/* The 'tags' field is a string array, so this works as-is */}
             {product.tags.join(". ")}
           </p>
-          <p className="text-sm font-medium">{product.description}</p>
+          {/* <p className="text-sm font-medium">{product.description}</p> */}
         </div>
         <p className="col-span-1 md:self-end text-2xl font-semibold">
           ${displayPrice}
