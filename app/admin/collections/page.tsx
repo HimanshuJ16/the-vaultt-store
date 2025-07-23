@@ -1,15 +1,10 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+// File: commerce/app/admin/collections/page.tsx
+
 import { getCollections } from "@/lib/sfcc";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { CollectionTable } from "./components/collection-table";
 
 export default async function AdminCollections() {
   const collections = await getCollections();
@@ -23,30 +18,7 @@ export default async function AdminCollections() {
             <Link href="/admin/collections/new">Add Collection</Link>
           </Button>
         </div>
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Collection</TableHead>
-                <TableHead>Handle</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {collections.map((collection) => (
-                <TableRow key={collection.id}>
-                  <TableCell className="font-medium">{collection.title}</TableCell>
-                  <TableCell>{collection.handle}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/admin/collections/${collection.handle}`}>Edit</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CollectionTable collections={collections} />
       </div>
     </PageLayout>
   );

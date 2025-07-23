@@ -1,3 +1,5 @@
+// File: commerce/lib/sfcc/types.ts
+
 import {
   Product as PrismaProduct,
   Collection as PrismaCollection,
@@ -14,7 +16,11 @@ import {
 
 //- CORE ENTITIES
 
-export type Collection = PrismaCollection;
+export type Collection = PrismaCollection & {
+  _count?: {
+    products: number;
+  };
+};
 
 export type Product = PrismaProduct & {
   images: Image[];

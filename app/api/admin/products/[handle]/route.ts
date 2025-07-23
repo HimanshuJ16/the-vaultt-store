@@ -1,5 +1,8 @@
+// File: commerce/app/api/admin/products/[handle]/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { deleteProduct } from '@/lib/sfcc';
 
 export async function GET(
   req: NextRequest,
@@ -69,10 +72,7 @@ export async function DELETE(
   { params }: { params: { handle: string } }
 ) {
   try {
-    await prisma.product.delete({
-      where: { handle: params.handle },
-    });
-
+    await deleteProduct(params.handle);
     return NextResponse.json({ message: 'Product deleted successfully' }, { status: 200 });
   } catch (error) {
     console.error('Failed to delete product:', error);

@@ -1,3 +1,5 @@
+// File: commerce/lib/sfcc/index.ts
+
 "use server";
 
 import { cookies } from 'next/headers';
@@ -144,7 +146,14 @@ async function getOrCreateCart(): Promise<Cart> {
 //- COLLECTION & PRODUCT FUNCTIONS
 
 export async function getCollections(): Promise<Collection[]> {
-  return await prisma.collection.findMany();
+  const collections = await prisma.collection.findMany({
+    include: {
+      _count: {
+        select: { products: true },
+      },
+    },
+  });
+  return collections;
 }
 
 export async function getCollection(handle: string): Promise<Collection | null> {
@@ -617,11 +626,39 @@ export async function getUsers() {
 }
 
 export async function deleteProduct(handle: string): Promise<void> {
-  await prisma.product.delete({
+  const product = await prisma.product.findUnique({
     where: { handle },
+    include: { variants: true }
   });
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  const variantIds = product.variants.map(variant => variant.id);
+  
+  // Start a transaction to ensure all or no operations are performed
+  await prisma.$transaction([
+    // Delete items that reference product variants
+    prisma.orderItem.deleteMany({ where: { productVariantId: { in: variantIds } } }),
+    prisma.cartItem.deleteMany({ where: { productVariantId: { in: variantIds } } }),
+    
+    // Delete items that reference the product directly
+    prisma.orderItem.deleteMany({ where: { productId: product.id } }),
+    prisma.cartItem.deleteMany({ where: { productId: product.id } }),
+    
+    // Delete product-specific data
+    prisma.productVariant.deleteMany({ where: { productId: product.id } }),
+    prisma.productOption.deleteMany({ where: { productId: product.id } }),
+    prisma.image.deleteMany({ where: { productId: product.id } }),
+    
+    // Finally, delete the product itself
+    prisma.product.delete({ where: { handle } })
+  ]);
+
   revalidateTag(TAGS.products);
 }
+
 
 export async function deleteCollection(handle: string): Promise<void> {
   await prisma.collection.delete({
