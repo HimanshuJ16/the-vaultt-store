@@ -1,9 +1,11 @@
+// File: commerce/app/product/[handle]/page.tsx
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 
-import { getProduct } from "@/lib/sfcc"; // Updated import
+import { getProduct } from "@/lib/sfcc"; 
 import { HIDDEN_PRODUCT_TAG } from "@/lib/constants";
 import {
   Breadcrumb,
@@ -31,13 +33,12 @@ export async function generateMetadata({
 
   if (!product) return notFound();
 
-  // Use the new product structure for metadata
-  const { url, width, height, altText: alt } = product.featuredImage || {};
-  const indexable = !product.tags.includes(HIDDEN_PRODUCT_TAG);
+  const { featuredImage, title, description, tags } = product;
+  const indexable = !tags.includes(HIDDEN_PRODUCT_TAG);
 
   return {
-    title: product.title, // Simplified SEO title
-    description: product.description, // Simplified SEO description
+    title: title,
+    description: description,
     robots: {
       index: indexable,
       follow: indexable,
@@ -46,14 +47,14 @@ export async function generateMetadata({
         follow: indexable,
       },
     },
-    openGraph: url
+    openGraph: featuredImage
       ? {
           images: [
             {
-              url,
-              width: width || 1200,
-              height: height || 1200,
-              alt: alt || product.title,
+              url: featuredImage,
+              width: 1200,
+              height: 1200,
+              alt: title,
             },
           ],
         }
