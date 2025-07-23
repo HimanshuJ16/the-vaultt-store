@@ -3,6 +3,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -13,12 +14,14 @@ import {
 } from "@/components/ui/sidebar";
 import {
   HomeIcon,
+  LogOutIcon,
+  PackageIcon,
   ShoppingBagIcon,
   TagIcon,
   UsersIcon,
-  PackageIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+
 import clsx from "clsx";
 import Link from "next/link";
 
@@ -45,7 +48,7 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar className="bg-muted text-muted-foreground border-r shadow-sm">
+      <Sidebar className="border-r shadow-sm bg-muted text-muted-foreground">
         <SidebarHeader className="flex items-center justify-between p-4">
           <h1 className="text-lg font-semibold text-foreground">Admin</h1>
           <SidebarTrigger />
@@ -58,31 +61,47 @@ export default function AdminLayout({
               return (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href}>
-                  <SidebarMenuButton
-                    isActive={active}
-                    tooltip={item.label}
-                    className={clsx(
-                      "group flex items-center gap-3 px-4 py-2 rounded-md transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-accent hover:text-foreground"
-                    )}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="group-data-[collapsible=icon]:hidden text-sm font-medium">
-                      {item.label}
-                    </span>
-                  </SidebarMenuButton>
+                    <SidebarMenuButton
+                      isActive={active}
+                      tooltip={item.label}
+                      className={clsx(
+                        "group flex items-center gap-3 rounded-md px-4 py-2 transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="group-data-[collapsible=icon]:hidden text-sm font-medium">
+                        {item.label}
+                      </span>
+                    </SidebarMenuButton>
                   </Link>
-                  
                 </SidebarMenuItem>
               );
             })}
           </SidebarMenu>
         </SidebarContent>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <a href="/api/admin/logout">
+                <SidebarMenuButton
+                  tooltip="Logout"
+                  className="group flex items-center gap-3 rounded-md px-4 py-2 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <LogOutIcon className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden text-sm font-medium">
+                    Logout
+                  </span>
+                </SidebarMenuButton>
+              </a>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-h-screen p-6 bg-background">
+      <SidebarInset className="min-h-screen bg-background p-6">
         {children}
       </SidebarInset>
     </SidebarProvider>
