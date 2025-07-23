@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  clerkId   String    @unique
+  fullName  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  orders    Order[]
+  cart      Cart?
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  title         String
+  handle        String    @unique
+  description   String
+  descriptionHtml String
+  featuredImage String
+  currencyCode  String
+  price         Float
+  tags          String[]
+  category      String?
+  availableForSale Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  collectionId  String?
+  collection    Collection? @relation(fields: [collectionId], references: [id])
+  images        Image[]
+  options       ProductOption[]
+  variants      ProductVariant[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  title       String
+  handle      String    @unique
+  description String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Order {
+  id              String    @id @default(cuid())
+  orderNumber     String    @unique
+  totalAmount     Float
+  totalTaxAmount  Float
+  shippingAmount  Float
+  customerEmail   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  shippingAddress String
+  billingAddress  String
+  shippingMethod  String
+  items           OrderItem[]
+}
+
+model Cart {
+  id              String    @id @default(cuid())
+  totalQuantity   Int
+  subtotalAmount  Float
+  totalAmount     Float
+  totalTaxAmount  Float
+  shippingAmount  Float
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  items           CartItem[]
+}
+
+model Image {
+  id               String          @id @default(cuid())
+  url              String
+  altText          String
+  height           Int
+  width            Int
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+}
+
+model ProductOption {
+  id        String   @id @default(cuid())
+  name      String
+  values    Json
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model ProductVariant {
+  id               String     @id @default(cuid())
+  title            String
+  availableForSale Boolean
+  price            Float
+  size             String?
+  productId        String
+  product          Product    @relation(fields: [productId], references: [id])
+  selectedOptions  Json
+  images           Image[]
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
+}
+
+model CartItem {
+  id               String          @id @default(cuid())
+  quantity         Int
+  totalAmount      Float
+  cartId           String
+  cart             Cart            @relation(fields: [cartId], references: [id])
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+}
+
+model OrderItem {
+  id               String          @id @default(cuid())
+  quantity         Int
+  totalAmount      Float
+  orderId          String
+  order            Order           @relation(fields: [orderId], references: [id])
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+}
+
+model Menu {
+  id     String @id @default(cuid())
+  handle String @unique
+  links  Json
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  title       String
+  handle      String   @unique
+  body        String
+  bodySummary String
+  seo         Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
