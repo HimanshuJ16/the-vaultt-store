@@ -1,4 +1,4 @@
-// File: commerce/app/api/admin/products/[handle]/route.ts
+// commerce/app/api/admin/products/[handle]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -15,7 +15,7 @@ export async function GET(
         images: true,
         options: true,
         variants: true,
-        collection: true,
+        collections: true,
       },
     });
 
@@ -37,7 +37,7 @@ export async function PUT(
 ) {
   try {
     const body = await req.json();
-    const { id, title, handle, description, price, collectionId, images } = body;
+    const { id, title, handle, description, price, collectionIds, images } = body;
 
     const updatedProduct = await prisma.product.update({
       where: { id },
@@ -46,7 +46,9 @@ export async function PUT(
         handle,
         description,
         price,
-        collectionId,
+        collections: {
+          set: collectionIds.map((id: string) => ({ id })),
+        },
         images: {
           deleteMany: {},
           create: images.map((image: { url: string, altText: string }) => ({

@@ -1,3 +1,5 @@
+// commerce/app/api/admin/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
     const { type, ...data } = body;
 
     if (type === 'product') {
-      const { title, handle, description, descriptionHtml, price, collectionId, images, category, sizes, currencyCode, tags, availableForSale } = data;
+      const { title, handle, description, descriptionHtml, price, collectionIds, images, category, sizes, currencyCode, tags, availableForSale } = data;
 
       if (!title || !handle || !description || !price) {
         return NextResponse.json({ error: 'Missing required product fields' }, { status: 400 });
@@ -27,7 +29,9 @@ export async function POST(req: NextRequest) {
           description,
           descriptionHtml: descriptionHtml || `<p>${description}</p>`,
           price: parseFloat(price),
-          collectionId,
+          collections: {
+            connect: collectionIds?.map((id: string) => ({ id })) || [],
+          },
           featuredImage: images?.[0] || 'https://placehold.co/600x600/EEE/31343C?text=Product+Image',
           currencyCode: currencyCode || 'USD',
           tags: tags || [],
@@ -62,6 +66,13 @@ export async function POST(req: NextRequest) {
           },
         },
       });
+
+      if (collectionIds && collectionIds.length > 0) {
+        await prisma.collection.updateMany({
+          where: { id: { in: collectionIds } },
+          data: { productsCount: { increment: 1 } },
+        });
+      }
 
       return NextResponse.json(newProduct, { status: 201 });
 

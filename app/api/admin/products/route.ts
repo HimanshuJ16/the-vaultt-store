@@ -1,3 +1,5 @@
+// commerce/app/api/admin/products/route.ts
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -18,7 +20,7 @@ const formatDescriptionToHtml = (description: string) => {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, handle, description, price, collectionId, images, category, sizes } = body;
+    const { title, handle, description, price, collectionIds, images, category, sizes } = body;
 
     if (!title || !handle || !description || !price) {
       return NextResponse.json({ error: 'Missing required product fields' }, { status: 400 });
@@ -33,7 +35,9 @@ export async function POST(req: Request) {
         description,
         descriptionHtml,
         price: parseFloat(price),
-        collectionId,
+        collections: {
+          connect: collectionIds.map((id: string) => ({ id })),
+        },
         featuredImage: images?.[0] || 'https://placehold.co/600x600/EEE/31343C?text=Product+Image',
         currencyCode: 'USD',
         tags: [],
@@ -69,6 +73,13 @@ export async function POST(req: Request) {
       },
     });
 
+    if (collectionIds && collectionIds.length > 0) {
+      await prisma.collection.updateMany({
+        where: { id: { in: collectionIds } },
+        data: { productsCount: { increment: 1 } },
+      });
+    }
+
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error) {
     console.error('Failed to create product:', error);
@@ -80,14 +91,14 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
     try {
       const body = await req.json();
-      const { id, title, handle, description, price, collectionId, images, category, sizes } = body;
+      const { id, title, handle, description, price, collectionIds, images, category, sizes } = body;
   
       if (!id || !title || !handle || !description || !price) {
         return NextResponse.json({ error: 'Missing required product fields' }, { status: 400 });
       }
   
       const descriptionHtml = formatDescriptionToHtml(description);
-
+  
       // First, delete existing variants and options to avoid conflicts
       await prisma.productVariant.deleteMany({ where: { productId: id } });
       await prisma.productOption.deleteMany({ where: { productId: id } });
@@ -100,7 +111,9 @@ export async function PUT(req: Request) {
           description,
           descriptionHtml,
           price: parseFloat(price),
-          collectionId,
+          collections: {
+            set: collectionIds.map((id: string) => ({ id })),
+          },
           featuredImage: images?.[0] || 'https://placehold.co/600x600/EEE/31343C?text=Product+Image',
           currencyCode: 'USD',
           tags: [],

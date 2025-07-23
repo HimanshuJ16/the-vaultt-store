@@ -1,11 +1,11 @@
-// File: commerce/app/product/[handle]/page.tsx
+// commerce/app/product/[handle]/page.tsx
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 
-import { getProduct } from "@/lib/sfcc"; 
+import { getProduct } from "@/lib/sfcc";
 import { HIDDEN_PRODUCT_TAG } from "@/lib/constants";
 import {
   Breadcrumb,
@@ -72,8 +72,8 @@ export default async function ProductPage({
 
   if (!product) return notFound();
 
-  // The collection is now directly on the product object
-  const collection = product.collection;
+  // A product can be in many collections, we take the first one for the breadcrumb.
+  const collection = product.collections[0];
 
   const productJsonLd = {
     "@context": "https://schema.org",

@@ -1,4 +1,4 @@
-// File: commerce/lib/sfcc/index.ts
+// commerce/lib/sfcc/index.ts
 
 "use server";
 
@@ -77,10 +77,10 @@ async function getOrCreateCart(): Promise<Cart> {
   if (!userId) {
     throw new Error('User not authenticated. Please sign in to add items to your cart.');
   }
-  
+
   const userCart = await prisma.cart.findUnique({
     where: { userId },
-    include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } } } }, productVariant: true } } }
+    include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
   });
 
   if (userCart) {
@@ -90,7 +90,7 @@ async function getOrCreateCart(): Promise<Cart> {
   if (cartId) {
     const cart = await prisma.cart.findUnique({
       where: { id: cartId },
-      include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } } } }, productVariant: true } } }
+      include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
     });
     if (cart) {
       return {
@@ -153,7 +153,7 @@ export async function getCollections(): Promise<Collection[]> {
       },
     },
   });
-  return collections;
+  return collections.map(c => ({ ...c, productsCount: c._count.products }));
 }
 
 export async function getCollection(handle: string): Promise<Collection | null> {
@@ -163,7 +163,7 @@ export async function getCollection(handle: string): Promise<Collection | null> 
 export async function getProduct(handle: string): Promise<Product | null> {
   return await prisma.product.findUnique({
     where: { handle },
-    include: { images: true, options: true, variants: { include: { images: true } }, collection: true },
+    include: { images: true, options: true, variants: { include: { images: true } }, collections: true },
   });
 }
 
@@ -175,8 +175,8 @@ export async function getCollectionProducts({
   limit?: number;
 }): Promise<Product[]> {
   const products = await prisma.product.findMany({
-    where: { collection: { handle: collectionHandle } },
-    include: { images: true, options: true, variants: { include: { images: true } }, collection: true },
+    where: { collections: { some: { handle: collectionHandle } } },
+    include: { images: true, options: true, variants: { include: { images: true } }, collections: true },
     take: limit,
   });
   return products;
@@ -196,21 +196,23 @@ export async function getProducts({
         mode: 'insensitive',
       },
     },
-    include: { images: true, options: true, variants: { include: { images: true } }, collection: true },
+    include: { images: true, options: true, variants: { include: { images: true } }, collections: true },
     take: limit,
   });
 }
 
 export async function getProductRecommendations(productId: string): Promise<Product[]> {
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  if (!product?.collectionId) return [];
+  const product = await prisma.product.findUnique({ where: { id: productId }, include: { collections: true } });
+  if (!product?.collections || product.collections.length === 0) return [];
+
+  const collectionIds = product.collections.map(c => c.id);
 
   return await prisma.product.findMany({
     where: {
-      collectionId: product.collectionId,
+      collections: { some: { id: { in: collectionIds } } },
       id: { not: productId },
     },
-    include: { images: true, options: true, variants: { include: { images: true } }, collection: true },
+    include: { images: true, options: true, variants: { include: { images: true } }, collections: true },
     take: 10,
   });
 }
@@ -227,7 +229,7 @@ export async function getCart(): Promise<Cart | null> {
 
   const cart = await prisma.cart.findUnique({
     where: { id: cartId },
-    include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } } } }, productVariant: true } } }
+    include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
   });
 
   if (!cart) return null;
@@ -259,7 +261,7 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
   const cart = await getOrCreateCart();
 
   for (const line of lines) {
-    let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collection: any}) | null = null;
+    let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collections: any[]}) | null = null;
     let variant: (ProductVariant & {images: any[]}) | null = null;
     let price: number | undefined;
     let productVariantId: string | null = null;
@@ -268,12 +270,12 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
     variant = await prisma.productVariant.findUnique({ where: { id: line.merchandiseId }, include: { images: true } });
 
     if (variant) {
-      product = await prisma.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collection: true } });
+      product = await prisma.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       price = variant.price;
       productVariantId = variant.id;
     } else {
       // Assume it's a product ID
-      product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collection: true } });
+      product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       if (product) {
         price = product.price;
       }
@@ -352,7 +354,7 @@ export async function updateCart(lines: { id: string; merchandiseId: string; qua
   if (!cartId) throw new Error('Cart not found');
 
   for (const line of lines) {
-    let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collection: any}) | null = null;
+    let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collections: any[]}) | null = null;
     let variant: (ProductVariant & {images: any[]}) | null = null;
     let price: number | undefined;
 
@@ -360,11 +362,11 @@ export async function updateCart(lines: { id: string; merchandiseId: string; qua
     variant = await prisma.productVariant.findUnique({ where: { id: line.merchandiseId }, include: { images: true } });
 
     if (variant) {
-      product = await prisma.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collection: true } });
+      product = await prisma.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       price = variant.price;
     } else {
       // Assume it's a product ID
-      product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collection: true } });
+      product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       if (product) {
         price = product.price;
       }
@@ -519,7 +521,7 @@ export async function placeOrder({ shippingAddress, email }: { shippingAddress: 
           images: [], // add empty array for images
           options: [], // add empty array for options
           variants: [], // add empty array for variants
-          collection: null, // add null for collection
+          collections: [], // add empty array for collections
         }
       }
     })),
@@ -607,7 +609,7 @@ export async function getOrders(): Promise<Order[]> {
           images: [], // add empty array for images
           options: [], // add empty array for options
           variants: [], // add empty array for variants
-          collection: null, // add null for collection
+          collections: [], // add null for collection
         }
       }
     })),

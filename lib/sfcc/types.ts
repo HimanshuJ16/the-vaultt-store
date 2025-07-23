@@ -26,7 +26,8 @@ export type Product = PrismaProduct & {
   images: Image[];
   options: ProductOption[];
   variants: ProductVariant[];
-  collection?: { id: string; createdAt: Date; updatedAt: Date; title: string; handle: string; description: string; } | null;
+  // This was likely 'collection', it should be 'collections'
+  collections: Collection[]; 
 };
 
 export type Cart = Omit<PrismaCart, 'items'> & {

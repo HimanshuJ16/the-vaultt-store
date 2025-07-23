@@ -57,7 +57,7 @@ export async function DELETE(
   try {
     // Find all products in the collection to be deleted
     const productsToDelete = await prisma.product.findMany({
-      where: { collection: { handle: params.handle } },
+      where: { collections: { some: { handle: params.handle } } },
     });
 
     // Delete each product associated with the collection using the centralized function

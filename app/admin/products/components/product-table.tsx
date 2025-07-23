@@ -1,4 +1,4 @@
-// File: commerce/app/admin/products/components/product-table.tsx
+// commerce/app/admin/products/components/product-table.tsx
 
 "use client";
 
@@ -56,7 +56,7 @@ export function ProductTable({ products }: ProductTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Product</TableHead>
-            <TableHead>Collection</TableHead>
+            <TableHead>Collections</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Inventory</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -66,7 +66,10 @@ export function ProductTable({ products }: ProductTableProps) {
           {products.map((product) => (
             <TableRow key={product.id}>
               <TableCell className="font-medium">{product.title}</TableCell>
-              <TableCell>{product.collection?.title || "N/A"}</TableCell>
+              {/* This line is updated to handle the array of collections */}
+              <TableCell>
+                {product.collections.map((c) => c.title).join(", ") || "N/A"}
+              </TableCell>
               <TableCell>${product.price.toFixed(2)}</TableCell>
               <TableCell>
                 {product.availableForSale ? "In Stock" : "Out of Stock"}

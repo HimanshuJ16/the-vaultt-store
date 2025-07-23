@@ -27,13 +27,14 @@ import { toast } from "sonner";
 import { ChangeEvent, useState, useTransition } from "react";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   handle: z.string().min(1, "Handle is required"),
   description: z.string().min(1, "Description is required").max(700, "Description should not be more than 700 characters"),
   price: z.coerce.number().min(0, "Price must be a positive number"),
-  collectionId: z.string().optional(),
+  collectionIds: z.array(z.string()).optional(),
   category: z.string().optional(),
   sizes: z.array(z.string()).optional(),
   availableForSale: z.boolean().default(true),
@@ -60,7 +61,7 @@ export function ProductForm({ product, collections }: ProductFormProps) {
       handle: product?.handle || "",
       description: product?.description || "",
       price: product?.price || 0,
-      collectionId: product?.collectionId || "",
+      collectionIds: product?.collections.map(c => c.id) || [],
       category: product?.category || "",
       sizes: product?.variants.map(v => v.size).filter(Boolean) as string[] || [],
       availableForSale: product?.availableForSale ?? true,
@@ -120,6 +121,7 @@ export function ProductForm({ product, collections }: ProductFormProps) {
   };
 
   const category = form.watch("category");
+  const collectionOptions = collections.map(c => ({ value: c.id, label: c.title }));
 
   return (
     <Form {...form}>
@@ -178,24 +180,18 @@ export function ProductForm({ product, collections }: ProductFormProps) {
         />
         <FormField
           control={form.control}
-          name="collectionId"
+          name="collectionIds"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Collection</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a collection" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {collections.map((collection) => (
-                    <SelectItem key={collection.id} value={collection.id}>
-                      {collection.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Collections</FormLabel>
+              <FormControl>
+                <MultiSelect
+                  options={collectionOptions}
+                  selected={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select collections..."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
