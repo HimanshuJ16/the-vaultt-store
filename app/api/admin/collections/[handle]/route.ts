@@ -55,24 +55,15 @@ export async function DELETE(
   { params }: { params: { handle: string } }
 ) {
   try {
-    // Find all products in the collection to be deleted
-    const productsToDelete = await prisma.product.findMany({
-      where: { collections: { some: { handle: params.handle } } },
-    });
-
-    // Delete each product associated with the collection using the centralized function
-    for (const product of productsToDelete) {
-      await deleteProduct(product.handle);
-    }
-
-    // After all associated products are deleted, delete the collection itself
+    // Directly delete the collection. Prisma will automatically handle
+    // removing the relations in the join table without deleting the products.
     await prisma.collection.delete({
       where: { handle: params.handle },
     });
 
-    return NextResponse.json({ message: 'Collection and its products deleted successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Collection deleted successfully' }, { status: 200 });
   } catch (error) {
-    console.error('Failed to delete collection and its products:', error);
+    console.error('Failed to delete collection:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ error: 'Failed to delete collection.', details: errorMessage }, { status: 500 });
   }
