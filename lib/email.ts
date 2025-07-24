@@ -79,8 +79,8 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
         }
         .button {
           display: inline-block;
-          background-color: #8B8B8B;
-          color: #fff;
+          background-color: #f1f1f1;
+          color: #0505fc;
           padding: 14px 36px;
           border-radius: 50px;
           text-decoration: none;
@@ -89,7 +89,7 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
           transition: background-color 0.3s ease;
         }
         .button:hover {
-          background-color: #333;
+          background-color: #fafafa;
         }
         .footer {
           background-color: #fafafa;
