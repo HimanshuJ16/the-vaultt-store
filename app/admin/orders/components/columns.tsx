@@ -89,7 +89,7 @@ export const columns: ColumnDef<Order>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem asChild>
-              <Link href={`/admin/orders/${order.id}`}>View order details</Link>
+              <Link href={`/admin/orders/${order.id}`}>View Order Details</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={`/admin/orders/${order.id}/update-status`}>
