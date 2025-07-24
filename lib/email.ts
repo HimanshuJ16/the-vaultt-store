@@ -203,13 +203,6 @@ interface OrderDetails {
 
 // Function to send an order confirmation email
 export async function sendOrderConfirmationEmail(userEmail: string, userName:string, order: OrderDetails) {
-  const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const orderUrl = `${baseUrl}/orders/${order.id}`;
-
   const itemsHtml = order.items.map(item => `
     <tr class="item">
         <td><img src="${item.product.image}" alt="${item.product.title}" width="60" /></td>

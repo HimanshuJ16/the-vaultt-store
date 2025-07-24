@@ -14,7 +14,7 @@ export async function generateMetadata({
   if (!collection) return notFound();
 
   return {
-    title: `${collection.title} | ACME Store`,
+    title: `${collection.title} | The Vaultt Store`,
     description:
       collection.description || `Explore ${collection.title} products.`,
   };

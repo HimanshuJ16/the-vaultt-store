@@ -111,7 +111,7 @@ async function getOrCreateCart(): Promise<Cart> {
         checkoutUrl: '/checkout',
         lines: cart.items.map(item => ({
           ...item,
-          cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+          cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
           merchandise: {
             id: item.productVariantId || item.productId,
             title: item.product.title,
@@ -120,10 +120,10 @@ async function getOrCreateCart(): Promise<Cart> {
           }
         })),
         cost: {
-          subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'USD' },
-          totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'USD' },
-          totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'USD' },
-          shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'USD' },
+          subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'INR' },
+          totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'INR' },
+          totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'INR' },
+          shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'INR' },
         }
       };
     }
@@ -147,10 +147,10 @@ async function getOrCreateCart(): Promise<Cart> {
     checkoutUrl: '/checkout',
     lines: [],
     cost: {
-      subtotalAmount: { amount: '0', currencyCode: 'USD' },
-      totalAmount: { amount: '0', currencyCode: 'USD' },
-      totalTaxAmount: { amount: '0', currencyCode: 'USD' },
-      shippingAmount: { amount: '0', currencyCode: 'USD' },
+      subtotalAmount: { amount: '0', currencyCode: 'INR' },
+      totalAmount: { amount: '0', currencyCode: 'INR' },
+      totalTaxAmount: { amount: '0', currencyCode: 'INR' },
+      shippingAmount: { amount: '0', currencyCode: 'INR' },
     }
   };
 }
@@ -253,7 +253,7 @@ export async function getCart(): Promise<Cart | null> {
     checkoutUrl: '/checkout',
     lines: cart.items.map(item => ({
       ...item,
-      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
       merchandise: {
         id: item.productVariantId || item.productId,
         title: item.product.title,
@@ -262,10 +262,10 @@ export async function getCart(): Promise<Cart | null> {
       }
     })),
     cost: {
-      subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'USD' },
-      totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'USD' },
-      totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'USD' },
-      shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'USD' },
+      subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'INR' },
+      totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'INR' },
+      totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'INR' },
+      shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'INR' },
     }
   };
 }
@@ -450,14 +450,14 @@ export async function getShippingMethods(): Promise<ShippingMethod[]> {
       id: 'standard-shipping',
       name: 'Standard Shipping',
       description: '5-7 business days',
-      price: { amount: '5.00', currencyCode: 'USD' },
+      price: { amount: '5.00', currencyCode: 'INR' },
       isDefault: true,
     },
     {
       id: 'express-shipping',
       name: 'Express Shipping',
       description: '1-2 business days',
-      price: { amount: '15.00', currencyCode: 'USD' },
+      price: { amount: '15.00', currencyCode: 'INR' },
     },
   ];
 }
@@ -525,7 +525,7 @@ export async function placeOrder({ shippingAddress, email, contactNumber }: { sh
     ...newOrder,
     lines: newOrder.items.map(item => ({
       ...item,
-      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
       merchandise: {
         id: item.productVariant?.id || item.product.id,
         title: item.product.title,
@@ -540,10 +540,10 @@ export async function placeOrder({ shippingAddress, email, contactNumber }: { sh
       }
     })),
     cost: {
-      subtotalAmount: { amount: (newOrder.totalAmount - newOrder.shippingAmount - newOrder.totalTaxAmount).toString(), currencyCode: 'USD' },
-      totalAmount: { amount: newOrder.totalAmount.toString(), currencyCode: 'USD' },
-      totalTaxAmount: { amount: newOrder.totalTaxAmount.toString(), currencyCode: 'USD' },
-      shippingAmount: { amount: newOrder.shippingAmount.toString(), currencyCode: 'USD' },
+      subtotalAmount: { amount: (newOrder.totalAmount - newOrder.shippingAmount - newOrder.totalTaxAmount).toString(), currencyCode: 'INR' },
+      totalAmount: { amount: newOrder.totalAmount.toString(), currencyCode: 'INR' },
+      totalTaxAmount: { amount: newOrder.totalTaxAmount.toString(), currencyCode: 'INR' },
+      shippingAmount: { amount: newOrder.shippingAmount.toString(), currencyCode: 'INR' },
     }
   };
 }
@@ -561,14 +561,14 @@ export async function getCheckoutOrder(orderId: string): Promise<Order | null> {
     ...order,
     lines: order.items.map(item => ({
       ...item,
-      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
       merchandise: { ...item.product, selectedOptions: [] }
     })),
     cost: {
-      subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'USD' },
-      totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'USD' },
-      totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'USD' },
-      shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'USD' },
+      subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'INR' },
+      totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'INR' },
+      totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'INR' },
+      shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'INR' },
     }
   };
 }
@@ -613,7 +613,7 @@ export async function getOrders(): Promise<Order[]> {
     ...order,
     lines: order.items.map(item => ({
       ...item,
-      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
       merchandise: {
         id: item.productVariant?.id || item.product.id,
         title: item.product.title,
@@ -628,10 +628,10 @@ export async function getOrders(): Promise<Order[]> {
       }
     })),
     cost: {
-      subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'USD' },
-      totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'USD' },
-      totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'USD' },
-      shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'USD' },
+      subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'INR' },
+      totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'INR' },
+      totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'INR' },
+      shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'INR' },
     }
   }));
 }
@@ -660,7 +660,7 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       ...order,
       lines: order.items.map(item => ({
         ...item,
-        cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+        cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
         merchandise: {
           id: item.productVariant?.id || item.product.id,
           title: item.product.title,
@@ -675,10 +675,10 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
         }
       })),
       cost: {
-        subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'USD' },
-        totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'USD' },
-        totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'USD' },
-        shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'USD' },
+        subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'INR' },
+        totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'INR' },
+        totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'INR' },
+        shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'INR' },
       }
     };
   } catch (error) {

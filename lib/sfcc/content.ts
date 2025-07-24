@@ -88,15 +88,15 @@ export function getMenus() {
  */
 const homePage = {
   id: "home",
-  title: "Acme Store",
+  title: "The Vaultt Store",
   handle: "",
   body: ``,
   bodySummary:
-    "High-performance ecommerce store built with Next.js, Vercel, and Salesforce Commerce Cloud.",
+    "High-performance ecommerce store built with Next.js, Vercel",
   seo: {
-    title: "Acme Store",
+    title: "The Vaultt Store",
     description:
-      "High-performance ecommerce store built with Next.js, Vercel, and Salesforce Commerce Cloud.",
+      "High-performance ecommerce store built with Next.js, Vercel",
   },
   createdAt: "2024-09-20T20:15:06Z",
   updatedAt: "2024-09-20T20:15:06Z",

@@ -2,8 +2,8 @@ import ProductList from "./components/product-list";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Shop | ACME Store",
-  description: "Explore all products available at the ACME Store.",
+  title: "Shop | The Vaultt Store",
+  description: "Explore all products available at the Vaultt Store.",
 };
 
 export default async function Shop() {

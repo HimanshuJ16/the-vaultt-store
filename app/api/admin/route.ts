@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             connect: collectionIds?.map((id: string) => ({ id })) || [],
           },
           featuredImage: images?.[0] || 'https://placehold.co/600x600/EEE/31343C?text=Product+Image',
-          currencyCode: currencyCode || 'USD',
+          currencyCode: currencyCode || 'INR',
           tags: tags || [],
           category,
           availableForSale: availableForSale !== undefined ? availableForSale : true,
