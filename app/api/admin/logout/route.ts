@@ -7,5 +7,5 @@ export async function GET() {
   (await cookies()).delete('admin-authenticated');
 
   // Redirect to the login page
-  return NextResponse.redirect(new URL('/admin/login', process.env.VERCEL_PROJECT_PRODUCTION_URL));
+  return NextResponse.redirect(new URL('/admin/login', process.env.NEXT_PUBLIC_BASE_URL));
 }
