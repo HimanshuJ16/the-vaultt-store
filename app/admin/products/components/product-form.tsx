@@ -24,10 +24,17 @@ import {
 import { Collection, Product } from "@/lib/sfcc/types";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChangeEvent, useState, useTransition } from "react";
+import { ChangeEvent, useState, useTransition, useEffect } from "react";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { X } from "lucide-react";
+
+// Define the type for an image item to track both URL and a potential new file
+type ImageItem = {
+  url: string;
+  file?: File;
+};
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -51,8 +58,10 @@ const girlSizes = ['36', '37', '38', '39', '40'];
 export function ProductForm({ product, collections }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>(product?.images.map(i => i.url) || []);
+  // State to hold all images (existing and new)
+  const [imageItems, setImageItems] = useState<ImageItem[]>(
+    product?.images.map(img => ({ url: img.url })) || []
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,43 +77,74 @@ export function ProductForm({ product, collections }: ProductFormProps) {
     },
   });
 
+  const category = form.watch("category");
+  const collectionOptions = collections.map(c => ({ value: c.id, label: c.title }));
+
+  useEffect(() => {
+    if (category === 'Boys') {
+      form.setValue('sizes', boySizes);
+    } else if (category === 'Girls') {
+      form.setValue('sizes', girlSizes);
+    }
+  }, [category, form]);
+
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
-
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-      setPreviews(prev => [...prev, ...newPreviews]);
+      const newImageItems: ImageItem[] = newFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        file: file,
+      }));
+      setImageItems(prev => [...prev, ...newImageItems]);
     }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    const itemToRemove = imageItems[indexToRemove];
+    // If it's a new file preview (a blob URL), revoke it to prevent memory leaks
+    if (itemToRemove.file) {
+      URL.revokeObjectURL(itemToRemove.url);
+    }
+    setImageItems(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     startTransition(async () => {
       try {
-        let imageUrls = product?.images.map(i => i.url) || [];
+        // Separate existing images from new files
+        const existingImageUrls = imageItems
+          .filter(item => !item.file)
+          .map(item => item.url);
+        
+        const newFiles = imageItems
+          .filter(item => item.file)
+          .map(item => item.file as File);
 
-        if (files.length > 0) {
+        let newUploadedUrls: string[] = [];
+
+        // Upload new files if there are any
+        if (newFiles.length > 0) {
           const formData = new FormData();
-          files.forEach(file => formData.append('files', file));
+          newFiles.forEach(file => formData.append('files', file));
 
           const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
             body: formData,
           });
 
-          if (!uploadResponse.ok) {
-            throw new Error('Image upload failed');
-          }
-
+          if (!uploadResponse.ok) throw new Error('Image upload failed');
           const uploadData = await uploadResponse.json();
-          imageUrls = [...imageUrls, ...uploadData.urls];
+          newUploadedUrls = uploadData.urls;
         }
+
+        // Combine the old and new URLs for the final list
+        const finalImageUrls = [...existingImageUrls, ...newUploadedUrls];
 
         const method = product ? 'PUT' : 'POST';
         const response = await fetch('/api/admin/products', {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...values, images: imageUrls, id: product?.id }),
+          body: JSON.stringify({ ...values, images: finalImageUrls, id: product?.id }),
         });
 
         if (!response.ok) {
@@ -120,12 +160,10 @@ export function ProductForm({ product, collections }: ProductFormProps) {
     });
   };
 
-  const category = form.watch("category");
-  const collectionOptions = collections.map(c => ({ value: c.id, label: c.title }));
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Rest of the form fields (Title, Handle, etc.) remain unchanged */}
         <FormField
           control={form.control}
           name="title"
@@ -217,7 +255,6 @@ export function ProductForm({ product, collections }: ProductFormProps) {
             </FormItem>
           )}
         />
-
         {category === 'Boys' && (
           <FormField
             control={form.control}
@@ -258,7 +295,6 @@ export function ProductForm({ product, collections }: ProductFormProps) {
             )}
           />
         )}
-
         {category === 'Girls' && (
           <FormField
             control={form.control}
@@ -299,16 +335,23 @@ export function ProductForm({ product, collections }: ProductFormProps) {
             )}
           />
         )}
-
         <FormItem>
           <FormLabel>Images</FormLabel>
           <FormControl>
-            <Input type="file" multiple onChange={handleImageChange} />
+            <Input type="file" multiple onChange={handleImageChange} accept="image/*" />
           </FormControl>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            {previews.map((preview, index) => (
+            {imageItems.map((item, index) => (
               <div key={index} className="relative aspect-square">
-                <Image src={preview} alt="Product preview" layout="fill" className="rounded-md object-cover" />
+                <Image src={item.url} alt="Product preview" layout="fill" className="rounded-md object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700 transition-colors"
+                  aria-label="Remove image"
+                >
+                  <X size={16} />
+                </button>
               </div>
             ))}
           </div>

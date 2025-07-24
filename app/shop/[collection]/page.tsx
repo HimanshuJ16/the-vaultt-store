@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getCollection } from "@/lib/sfcc"; // Updated import
+import { getCollection } from "@/lib/sfcc";
 import { notFound } from "next/navigation";
 import ProductList from "../components/product-list";
 
