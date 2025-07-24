@@ -14,6 +14,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   HomeIcon,
@@ -50,7 +51,7 @@ export default function AdminLayout({
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <Sidebar className="border-r shadow-sm bg-muted text-muted-foreground">
+        <Sidebar className="border-r shadow-sm bg-muted text-muted-foreground" collapsible="icon">
           <SidebarHeader className="flex items-center justify-between p-4">
             <Link href="/admin" className="group-data-[collapsible=icon]:hidden">
               <Image
@@ -61,6 +62,7 @@ export default function AdminLayout({
                 className="object-contain"
               />
             </Link>
+            <SidebarTrigger className="md:hidden" />
           </SidebarHeader>
 
           <SidebarContent>
@@ -79,7 +81,7 @@ export default function AdminLayout({
               <SidebarGroup>
                 <SidebarGroupLabel>User</SidebarGroupLabel>
                 <SidebarMenuItem>
-                  <div className="group flex items-center gap-3 rounded-md px-4 py-2">
+                  <div className="group flex items-center gap-3 rounded-md py-2">
                     <UserCircleIcon className="h-5 w-5 flex-shrink-0" />
                     <div className="group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-medium">Administrator</p>
@@ -93,7 +95,7 @@ export default function AdminLayout({
                   <a href="/api/admin/logout">
                     <SidebarMenuButton
                       tooltip="Logout"
-                      className="group flex w-full items-center gap-3 rounded-md px-4 py-2 transition-colors hover:bg-accent hover:text-foreground"
+                      className="flex w-full items-center gap-3 rounded-md py-2 transition-colors hover:bg-accent hover:text-foreground"
                     >
                       <LogOutIcon className="h-5 w-5" />
                       <span className="group-data-[collapsible=icon]:hidden text-sm font-medium">
@@ -108,6 +110,10 @@ export default function AdminLayout({
         </Sidebar>
 
         <SidebarInset className="flex-1 bg-background">
+          <header className="flex items-center justify-between p-4 border-b">
+            <SidebarTrigger />
+            <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+          </header>
           <main className="p-6">
             {children}
           </main>
