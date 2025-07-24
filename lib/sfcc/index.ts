@@ -20,8 +20,8 @@ import {
 import { revalidateTag } from 'next/cache';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { Order as PrismaOrder, User as PrismaUser, OrderItem as PrismaOrderItem, Product as PrismaProduct, ProductVariant as PrismaProductVariant } from "@prisma/client";
+import { sendWelcomeEmail } from '../email';
 
-// Helper to get the user ID from cookies, assuming you set it upon login/session start
 export async function getUserId() {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
@@ -40,24 +40,35 @@ export async function getUserId() {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(clerkId);
     if (!clerkUser) {
-      throw new Error('Clerk user not found');
+      throw new Error("Clerk user not found");
     }
 
     // Extract the primary email address
     const email = clerkUser.emailAddresses[0]?.emailAddress;
     if (!email) {
       // Handle cases where an email might not be available
-      throw new Error('User does not have a primary email address');
+      throw new Error("User does not have a primary email address");
     }
+
+    const fullName = `${clerkUser.firstName} ${clerkUser.lastName}`;
 
     // Create a new user in your local database
     const newUser = await prisma.user.create({
       data: {
         clerkId,
         email,
-        fullName: `${clerkUser.firstName} ${clerkUser.lastName}`,
+        fullName,
       },
     });
+
+    // Send the welcome email to the new user
+    try {
+      await sendWelcomeEmail(newUser.email, newUser.fullName ?? '');
+      console.log(`Welcome email sent to ${newUser.email}`);
+    } catch (error) {
+      console.error(`Failed to send welcome email: ${error}`);
+      // You might want to handle this error, but not block the user creation
+    }
 
     return newUser.id;
   }

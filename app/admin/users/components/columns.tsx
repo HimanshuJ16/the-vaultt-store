@@ -23,7 +23,12 @@ export const columns: ColumnDef<User>[] = [
       <DataTableColumnHeader column={column} title="Date Joined" />
     ),
     cell: ({ row }) => {
-      return new Date(row.getValue("createdAt")).toLocaleDateString()
+      // Format the date consistently using a specific locale
+      return new Date(row.getValue("createdAt")).toLocaleDateString("en-US", {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
     },
   },
 ]
