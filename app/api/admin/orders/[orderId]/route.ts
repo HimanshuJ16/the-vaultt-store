@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { sendOrderShippedEmail } from '@/lib/email';
 
 export async function PUT(
   req: NextRequest,
@@ -17,13 +18,31 @@ export async function PUT(
         trackingId,
         parcelImage,
       },
+      include: {
+        user: true,
+      },
     });
 
+    if (updatedOrder.status === 'SHIPPED' && updatedOrder.user) {
+      try {
+        await sendOrderShippedEmail(
+          updatedOrder.user.email,
+          updatedOrder.user.fullName || '',
+          updatedOrder.orderNumber,
+          updatedOrder.trackingId || '',
+          updatedOrder.parcelImage || ''
+        );
+      } catch (emailError) {
+        console.error("Failed to send email:", emailError);
+      }
+    }
+
     return NextResponse.json(updatedOrder, { status: 200 });
+
   } catch (error) {
-    console.error("Error updating order:", error);
+    console.error("Failed to update order:", error);
     return NextResponse.json(
-      { error: "Failed to update order" },
+      { message: "An error occurred while updating the order." },
       { status: 500 }
     );
   }
