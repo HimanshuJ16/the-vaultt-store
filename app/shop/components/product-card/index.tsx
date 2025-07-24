@@ -6,7 +6,7 @@ import { VariantSelector } from "../variant-selector";
 import { ProductImage } from "./product-image";
 
 export const ProductCard = ({ product }: { product: Product }) => {
-  const displayPrice = `$${product.price.toFixed(2)}`;
+  const displayPrice = `₹${product.price.toFixed(2)}`;
 
   return (
     <div className="relative w-full aspect-[3/4] md:aspect-square bg-muted group overflow-hidden">

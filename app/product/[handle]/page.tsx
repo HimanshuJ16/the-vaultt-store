@@ -147,7 +147,7 @@ export default async function ProductPage({
                   {product.title}
                 </h1>
                 <p className="text-lg lg:text-xl 2xl:text-2xl font-semibold max-md:mt-8 mt-6">
-                  ${product.price.toFixed(2)}
+                  ₹{product.price.toFixed(2)}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

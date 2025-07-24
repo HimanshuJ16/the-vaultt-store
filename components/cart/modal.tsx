@@ -45,7 +45,7 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 dark:border-neutral-700">
           <p>Taxes</p>
           <p className="text-right text-base text-black dark:text-white">
-            ${cart.cost.totalTaxAmount.amount}
+            ₹{cart.cost.totalTaxAmount.amount}
           </p>
         </div>
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
@@ -55,7 +55,7 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
           <p>Total</p>
           <p className="text-right text-base text-black dark:text-white">
-            ${Number(cart.cost.totalAmount.amount).toFixed(2)}
+            ₹{Number(cart.cost.totalAmount.amount).toFixed(2)}
           </p>
         </div>
       </div>

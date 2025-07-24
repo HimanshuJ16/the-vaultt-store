@@ -70,7 +70,7 @@ export function ProductTable({ products }: ProductTableProps) {
               <TableCell>
                 {product.collections.map((c) => c.title).join(", ") || "N/A"}
               </TableCell>
-              <TableCell>${product.price.toFixed(2)}</TableCell>
+              <TableCell>₹{product.price.toFixed(2)}</TableCell>
               <TableCell>
                 {product.availableForSale ? "In Stock" : "Out of Stock"}
               </TableCell>

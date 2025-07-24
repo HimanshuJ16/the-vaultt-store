@@ -211,7 +211,7 @@ export async function sendOrderConfirmationEmail(userEmail: string, userName:str
             <small>Size: ${item.variant.size}</small>
         </td>
         <td>${item.quantity}</td>
-        <td>$${item.price.toFixed(2)}</td>
+        <td>₹${item.price.toFixed(2)}</td>
     </tr>
   `).join('');
 
@@ -291,7 +291,7 @@ export async function sendOrderConfirmationEmail(userEmail: string, userName:str
                             ${itemsHtml}
                             <tr class="total-row">
                                 <td colspan="3">Total</td>
-                                <td>$${order.totalAmount.toFixed(2)}</td>
+                                <td>₹${order.totalAmount.toFixed(2)}</td>
                             </tr>
                         </tbody>
                     </table>

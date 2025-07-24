@@ -90,7 +90,7 @@ export function CartItemCard({
             {sizeOption && <span className="text-sm text-muted-foreground">Size: {sizeOption.value}</span>}
           </Link>
           <p className="2xl:text-lg font-semibold">
-            ${Number(item.cost.totalAmount.amount).toFixed(2)}
+            ₹{Number(item.cost.totalAmount.amount).toFixed(2)}
           </p>
           <div className="flex justify-between items-end mt-auto">
             <div className="flex h-8 flex-row items-center rounded-md border border-neutral-200 dark:border-neutral-700">

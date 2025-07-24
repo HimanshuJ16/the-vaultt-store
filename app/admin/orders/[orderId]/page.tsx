@@ -37,7 +37,7 @@ export default async function OrderDetailPage({
           <CardContent className="space-y-2">
             <p><strong>Order ID:</strong> {order.orderNumber}</p>
             <p><strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
-            <p><strong>Total:</strong> ${order.totalAmount.toFixed(2)}</p>
+            <p><strong>Total:</strong> ₹{order.totalAmount.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -99,7 +99,7 @@ export default async function OrderDetailPage({
                   <TableCell>{item.product.title}</TableCell>
                   <TableCell>{item.productVariant?.title || 'N/A'}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
-                  <TableCell className="text-right">${item.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">₹{item.totalAmount.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

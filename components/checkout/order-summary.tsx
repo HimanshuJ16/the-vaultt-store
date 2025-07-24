@@ -16,7 +16,7 @@ export function OrderSummary({ cart }: { cart: Cart }) {
         <div className="flex items-center justify-between">
           <dt className="text-sm text-gray-600">Subtotal</dt>
           <dd className="text-sm font-medium text-gray-900">
-            ${cart.cost.subtotalAmount.amount}
+            ₹{cart.cost.subtotalAmount.amount}
           </dd>
         </div>
         <div className="flex items-center justify-between border-t border-gray-200 pt-4">
@@ -24,13 +24,13 @@ export function OrderSummary({ cart }: { cart: Cart }) {
             <span>Shipping estimate</span>
           </dt>
           <dd className="text-sm font-medium text-gray-900">
-            ${cart.cost.shippingAmount.amount}
+            ₹{cart.cost.shippingAmount.amount}
           </dd>
         </div>
         <div className="flex items-center justify-between border-t border-gray-200 pt-4">
           <dt className="text-base font-medium text-gray-900">Order total</dt>
           <dd className="text-base font-medium text-gray-900">
-            ${cart.cost.totalAmount.amount}
+            ₹{cart.cost.totalAmount.amount}
           </dd>
         </div>
       </dl>
@@ -54,7 +54,7 @@ export function OrderSummary({ cart }: { cart: Cart }) {
                   <h3>
                     <a href={`/product/${item.merchandise.product.handle}`}>{item.merchandise.product.title}</a>
                   </h3>
-                  <p className="ml-4">${item.totalAmount}</p>
+                  <p className="ml-4">₹{item.totalAmount}</p>
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
                   Size(EUR): {item.merchandise.selectedOptions.find(o => o.name.toLowerCase() === 'size')?.value}

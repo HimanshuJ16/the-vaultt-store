@@ -45,7 +45,7 @@ export function FeaturedProductLabel({
           {/* <p className="text-sm font-medium">{product.description}</p> */}
         </div>
         <p className="col-span-1 md:self-end text-2xl font-semibold">
-          ${displayPrice}
+          ₹{displayPrice}
         </p>
         <Suspense fallback={null}>
           <AddToCart
@@ -73,7 +73,7 @@ export function FeaturedProductLabel({
           {product.title}
         </Link>
         <p className="text-base font-semibold">
-          ${displayPrice}
+          ₹{displayPrice}
         </p>
       </div>
       <Suspense fallback={null}>
