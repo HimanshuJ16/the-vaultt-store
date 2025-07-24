@@ -126,6 +126,7 @@ export function ProductForm({ product, collections }: ProductFormProps) {
         if (newFiles.length > 0) {
           const formData = new FormData();
           newFiles.forEach(file => formData.append('files', file));
+          formData.append("folder", "ecommerce-products");
 
           const uploadResponse = await fetch('/api/upload', {
             method: 'POST',

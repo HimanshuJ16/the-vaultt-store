@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Image from "next/image";
 
 export default async function OrderDetailPage({
   params,
@@ -37,6 +38,22 @@ export default async function OrderDetailPage({
             <p><strong>Order ID:</strong> {order.orderNumber}</p>
             <p><strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
             <p><strong>Total:</strong> ${order.totalAmount.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p><strong>Status:</strong> {order.status}</p>
+            <p><strong>Tracking ID:</strong> {order.trackingId || 'N/A'}</p>
+            <p><strong>Parcel Image:</strong> 
+              {order.parcelImage ? 
+                <Image src={order.parcelImage} alt="Parcel Image" width={200} height={200} /> 
+                : 
+                ' N/A'
+              }
+            </p>
           </CardContent>
         </Card>
         <Card>

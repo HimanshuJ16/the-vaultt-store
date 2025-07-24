@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const files = formData.getAll('files') as File[];
+    const folder = (formData.get('folder') as string) || 'uploads'; // Get folder from form data
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: "No files uploaded." }, { status: 400 });
@@ -35,8 +36,8 @@ export async function POST(req: NextRequest) {
 
       // Upload the image to Cloudinary
       const uploadResponse = await cloudinary.uploader.upload(fileUri, {
-        // Optionally, specify a folder in Cloudinary
-        folder: 'ecommerce-products',
+        // Use the folder from the form data
+        folder: folder,
       });
       return uploadResponse.secure_url;
     });

@@ -636,6 +636,57 @@ export async function getOrders(): Promise<Order[]> {
   }));
 }
 
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: true,
+            productVariant: true,
+          },
+        },
+        user: true,
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    // Reshape the order to match the application's Order type
+    return {
+      ...order,
+      lines: order.items.map(item => ({
+        ...item,
+        cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'USD' } },
+        merchandise: {
+          id: item.productVariant?.id || item.product.id,
+          title: item.product.title,
+          selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
+          product: {
+            ...item.product,
+            images: [],
+            options: [],
+            variants: [],
+            collections: [],
+          }
+        }
+      })),
+      cost: {
+        subtotalAmount: { amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(), currencyCode: 'USD' },
+        totalAmount: { amount: order.totalAmount.toString(), currencyCode: 'USD' },
+        totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: 'USD' },
+        shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: 'USD' },
+      }
+    };
+  } catch (error) {
+    console.error("Failed to fetch order:", error);
+    return null;
+  }
+}
+
 export type DetailedOrder = PrismaOrder & {
     user: PrismaUser | null;
     items: (PrismaOrderItem & {

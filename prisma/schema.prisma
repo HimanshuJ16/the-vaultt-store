@@ -57,18 +57,27 @@ model Collection {
   productsCount Int       @default(0)
 }
 
+enum OrderStatus {
+  PROCESSING
+  SHIPPED
+  DELIVERED
+}
+
 model Order {
-  id              String    @id @default(cuid())
-  orderNumber     String    @unique
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
   totalAmount     Float
   totalTaxAmount  Float
   shippingAmount  Float
   customerEmail   String?
   contactNumber   String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  status          OrderStatus @default(PROCESSING)
+  trackingId      String?
+  parcelImage     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   userId          String
-  user            User      @relation(fields: [userId], references: [id])
+  user            User        @relation(fields: [userId], references: [id])
   shippingAddress String
   billingAddress  String
   shippingMethod  String
@@ -76,7 +85,7 @@ model Order {
 }
 
 model Cart {
-  id              String    @id @default(cuid())
+  id             String    @id @default(cuid())
   totalQuantity   Int
   subtotalAmount  Float
   totalAmount     Float
@@ -96,7 +105,7 @@ model Image {
   height           Int
   width            Int
   productId        String
-  product          Product         @relation(fields: [productId], references: [id])
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariantId String?
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
 }
@@ -106,7 +115,7 @@ model ProductOption {
   name      String
   values    Json
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductVariant {
@@ -116,7 +125,7 @@ model ProductVariant {
   price            Float
   size             String?
   productId        String
-  product          Product    @relation(fields: [productId], references: [id])
+  product          Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   selectedOptions  Json
   images           Image[]
   cartItems        CartItem[]
@@ -128,9 +137,9 @@ model CartItem {
   quantity         Int
   totalAmount      Float
   cartId           String
-  cart             Cart            @relation(fields: [cartId], references: [id])
+  cart             Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId        String
-  product          Product         @relation(fields: [productId], references: [id])
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariantId String?
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
 }
@@ -140,9 +149,9 @@ model OrderItem {
   quantity         Int
   totalAmount      Float
   orderId          String
-  order            Order           @relation(fields: [orderId], references: [id])
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId        String
-  product          Product         @relation(fields: [productId], references: [id])
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariantId String?
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
 }
