@@ -49,13 +49,9 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
-        {/* The Sidebar component itself handles its width via data attributes. 
-            It will have w-64 in the "full" state and w-20 in the "icon" state.
-            It is always part of the flex container and should not hide. */}
+      <div className="flex min-h-screen w-full">
         <Sidebar className="border-r shadow-sm bg-muted text-muted-foreground">
           <SidebarHeader className="flex items-center justify-between p-4">
-            {/* The logo is hidden when the sidebar is collapsed to save space */}
             <Link href="/admin" className="group-data-[collapsible=icon]:hidden">
               <Image
                 src="/logo1.png"
@@ -111,9 +107,6 @@ export default function AdminLayout({
           </SidebarFooter>
         </Sidebar>
 
-        {/* The SidebarInset component correctly applies margin-left to the main
-            content area, pushing it to the right to avoid being overlapped
-            by the fixed-position sidebar. */}
         <SidebarInset className="flex-1 bg-background">
           <main className="p-6">
             {children}
