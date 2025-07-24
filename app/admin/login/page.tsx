@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
             height={50}
             className="mx-auto mb-4"
           />
-          <CardTitle>Admin Login</CardTitle>
+          <CardTitle className='text-xl'>Admin Login</CardTitle>
         </CardHeader>
         <CardContent>
           {!emailSent ? (
