@@ -21,6 +21,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { Toaster } from "sonner"; // Import Toaster from sonner
 
 import clsx from "clsx";
 import Link from "next/link";
@@ -45,6 +46,15 @@ export default function AdminLayout({
       ? pathname === href
       : pathname.startsWith(href);
   };
+
+  if (pathname === "/admin/login") {
+    return (
+      <>
+        {children}
+        <Toaster />
+      </>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -104,6 +114,7 @@ export default function AdminLayout({
       <SidebarInset className="min-h-screen bg-background p-6">
         {children}
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }
