@@ -1,5 +1,4 @@
 // commerce/app/admin/layout.tsx
-
 "use client";
 
 import {
@@ -12,7 +11,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
@@ -67,7 +65,6 @@ export default function AdminLayout({
                 className="object-contain"
               />
             </Link>
-            <SidebarTrigger />
           </SidebarHeader>
 
           <SidebarContent>
@@ -91,7 +88,7 @@ export default function AdminLayout({
                     <div className="group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-medium">Administrator</p>
                       <p className="text-xs text-muted-foreground">
-                        admin@example.com
+                        thevaulttstore@gmail.com
                       </p>
                     </div>
                   </div>
