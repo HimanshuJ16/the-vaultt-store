@@ -180,3 +180,169 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
     throw new Error('Failed to send welcome email.');
   }
 }
+
+// Interface for the order details
+interface OrderDetails {
+  id: string;
+  totalAmount: number;
+  createdAt: Date;
+  shippingAddress: any; // Use `any` or a more specific type for your address object
+  items: {
+    quantity: number;
+    price: number;
+    product: {
+      title: string;
+      image: string;
+    };
+    variant: {
+      color: string;
+      size: string;
+    };
+  }[];
+}
+
+// Function to send an order confirmation email
+export async function sendOrderConfirmationEmail(userEmail: string, userName:string, order: OrderDetails) {
+  const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const orderUrl = `${baseUrl}/orders/${order.id}`;
+
+  const itemsHtml = order.items.map(item => `
+    <tr class="item">
+        <td><img src="${item.product.image}" alt="${item.product.title}" width="60" /></td>
+        <td>
+            ${item.product.title}<br>
+            <small>Size: ${item.variant.size}</small>
+        </td>
+        <td>${item.quantity}</td>
+        <td>$${item.price.toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  // A simple way to format the address
+  const formattedAddress = `${order.shippingAddress.line1}, ${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.postal_code}, ${order.shippingAddress.country}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Your Order Confirmation</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+            body { font-family: 'Poppins', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333; }
+            .container { max-width: 650px; margin: 20px auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden; }
+            .header { background-color: #F1F1F1; padding: 20px; text-align: center; }
+            .header img { max-width: 160px; }
+            .content { padding: 30px 40px; }
+            .content h1 { font-size: 24px; color: #000; margin-bottom: 10px; }
+            .content p { font-size: 16px; line-height: 1.6; }
+            .order-summary { margin: 30px 0; }
+            .summary-table { width: 100%; border-collapse: collapse; }
+            .summary-table th, .summary-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+            .summary-table th { color: #888; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+            .item td { vertical-align: middle; }
+            .item img { border-radius: 4px; margin-right: 15px; }
+            .total-row td { font-size: 18px; font-weight: 600; border-top: 2px solid #000; border-bottom: none; text-align: right; }
+            .shipping-details { background-color: #fafafa; padding: 20px; border-radius: 5px; margin-top: 20px; }
+            .shipping-details h2 { font-size: 18px; margin-bottom: 10px; }
+            .button-container { text-align: center; margin: 30px 0; }
+            .button { background-color: #000; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; }
+            .footer { background-color: #f2f2f2; padding: 25px 20px; text-align: center; font-size: 12px; color: #888; }
+            .socials {
+          margin-bottom: 15px;
+        }
+        .socials p {
+          margin-bottom: 10px;
+          font-size: 14px;
+          color: #444;
+          font-weight: 500;
+        }
+        .socials a {
+          margin: 0 8px;
+          display: inline-block;
+        }
+        .socials img {
+          width: 28px;
+          height: 28px;
+          opacity: 0.85;
+          transition: opacity 0.2s ease;
+        }
+        .socials img:hover {
+          opacity: 1;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="cid:logo" alt="The Vaultt Store Logo">
+            </div>
+            <div class="content">
+                <h1>Thanks for your order, ${userName}!</h1>
+                <p>We've received it and we're getting it ready for shipment. You'll receive another email once your order has shipped.</p>
+                
+                <div class="order-summary">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2">Order Summary</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                            <tr class="total-row">
+                                <td colspan="3">Total</td>
+                                <td>$${order.totalAmount.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="shipping-details">
+                    <h2>Shipping To</h2>
+                    <p>${formattedAddress}</p>
+                </div>
+            </div>
+            <div class="footer">
+                <div class="socials">
+                  <p>Follow us for exclusive drops & updates:</p>
+                  <a href="https://www.instagram.com/thevaulttstore">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
+                  </a>
+                  <a href="https://api.whatsapp.com/send?phone=918860515565&text=Hi%20TheVaulttStore%2C%20want%20to%20order%20a%20product.">
+                    <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" />
+                  </a>
+                </div>
+                <p>&copy; ${new Date().getFullYear()} The Vaultt Store. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `;
+  
+  const mailOptions = {
+    from: process.env.NODE_MAILER_EMAIL,
+    to: userEmail,
+    subject: `Your The Vaultt Store Order Confirmation [#${order.id}]`,
+    html: htmlContent,
+    attachments: [{
+        filename: 'logo1.png',
+        path: './public/logo1.png',
+        cid: 'logo'
+    }]
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Order confirmation email sent to:', userEmail);
+  } catch (error) {
+    console.error('Error sending order confirmation email:', error);
+    throw new Error('Failed to send order confirmation email.');
+  }
+}
