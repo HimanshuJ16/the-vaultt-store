@@ -23,9 +23,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ACME Store",
-  description: "ACME Store, your one-stop shop for all your needs.",
-    generator: 'v0.dev'
+  title: "The Vaultt Store",
+  description: "The Vaultt Store, your one-stop shop for all your needs.",
 };
 
 export default async function RootLayout({
