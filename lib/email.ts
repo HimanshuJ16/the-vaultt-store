@@ -1,7 +1,9 @@
 import { transporter } from './nodemailer';
 import { baseUrl } from './utils';
 
-// Function to send a welcome email with an improved design
+// Define the logo URL (use the full URL or a relative path like '/logo1.png')
+const logoUrl = 'https://the-vaultt-store.vercel.app/logo1.png';
+
 export async function sendWelcomeEmail(userEmail: string, userName: string) {
   const shopUrl = baseUrl + '/shop';
   const year = new Date().getFullYear();
@@ -130,7 +132,7 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
     <body>
       <div class="container">
         <div class="header">
-          <img src="cid:logo" alt="The Vaultt Store Logo" />
+          <img src="${logoUrl}" alt="The Vaultt Store Logo" />
         </div>
         <div class="content">
           <h1>Welcome, ${userName}!</h1>
@@ -153,7 +155,7 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
               <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" />
             </a>
           </div>
-          <p>&copy; ${year} The Vaultt Store. All rights reserved.</p>
+          <p>© ${year} The Vaultt Store. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -165,11 +167,7 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
     to: userEmail,
     subject: 'Welcome to The Vaultt Store!',
     html: htmlContent,
-    attachments: [{
-      filename: 'logo1.png',
-      path: './public/logo1.png',
-      cid: 'logo'
-    }]
+    // No attachments needed since the image is embedded via URL
   };
 
   try {
@@ -202,7 +200,7 @@ interface OrderDetails {
 }
 
 // Function to send an order confirmation email
-export async function sendOrderConfirmationEmail(userEmail: string, userName:string, order: OrderDetails) {
+export async function sendOrderConfirmationEmail(userEmail: string, userName: string, order: OrderDetails) {
   const itemsHtml = order.items.map(item => `
     <tr class="item">
         <td><img src="${item.product.image}" alt="${item.product.title}" width="60" /></td>
@@ -246,33 +244,33 @@ export async function sendOrderConfirmationEmail(userEmail: string, userName:str
             .button { background-color: #000; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; }
             .footer { background-color: #f2f2f2; padding: 25px 20px; text-align: center; font-size: 12px; color: #888; }
             .socials {
-          margin-bottom: 15px;
-        }
-        .socials p {
-          margin-bottom: 10px;
-          font-size: 14px;
-          color: #444;
-          font-weight: 500;
-        }
-        .socials a {
-          margin: 0 8px;
-          display: inline-block;
-        }
-        .socials img {
-          width: 28px;
-          height: 28px;
-          opacity: 0.85;
-          transition: opacity 0.2s ease;
-        }
-        .socials img:hover {
-          opacity: 1;
-        }
+              margin-bottom: 15px;
+            }
+            .socials p {
+              margin-bottom: 10px;
+              font-size: 14px;
+              color: #444;
+              font-weight: 500;
+            }
+            .socials a {
+              margin: 0 8px;
+              display: inline-block;
+            }
+            .socials img {
+              width: 28px;
+              height: 28px;
+              opacity: 0.85;
+              transition: opacity 0.2s ease;
+            }
+            .socials img:hover {
+              opacity: 1;
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <img src="cid:logo" alt="The Vaultt Store Logo">
+                <img src="${logoUrl}" alt="The Vaultt Store Logo">
             </div>
             <div class="content">
                 <h1>Thanks for your order, ${userName}!</h1>
@@ -312,7 +310,7 @@ export async function sendOrderConfirmationEmail(userEmail: string, userName:str
                     <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" />
                   </a>
                 </div>
-                <p>&copy; ${new Date().getFullYear()} The Vaultt Store. All rights reserved.</p>
+                <p>© ${new Date().getFullYear()} The Vaultt Store. All rights reserved.</p>
             </div>
         </div>
     </body>
@@ -324,11 +322,7 @@ export async function sendOrderConfirmationEmail(userEmail: string, userName:str
     to: userEmail,
     subject: `Your The Vaultt Store Order Confirmation [#${order.id}]`,
     html: htmlContent,
-    attachments: [{
-        filename: 'logo1.png',
-        path: './public/logo1.png',
-        cid: 'logo'
-    }]
+    // No attachments needed since the image is embedded via URL
   };
 
   try {
@@ -345,7 +339,7 @@ export async function sendOrderShippedEmail(
     userName: string,
     order: string,
     trackingId: string,
-    parcelImageUrl: string // <-- Changed from parcelImagePath to parcelImageUrl
+    parcelImageUrl: string
 ) {
     const year = new Date().getFullYear();
 
@@ -367,7 +361,7 @@ export async function sendOrderShippedEmail(
         <div style="max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
             
             <div style="padding: 30px; text-align: center; background-color: #F0F0F0;">
-                <img src="cid:logo" alt="The Vaultt Store Logo" style="max-width: 160px;" />
+                <img src="${logoUrl}" alt="The Vaultt Store Logo" style="max-width: 160px;" />
             </div>
             
             <div style="padding: 40px 30px; text-align: center;">
@@ -399,7 +393,7 @@ export async function sendOrderShippedEmail(
                         <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" style="width: 28px; height: 28px; opacity: 0.85;" />
                     </a>
                 </div>
-                <p>&copy; ${year} The Vaultt Store. All rights reserved.</p>
+                <p>© ${year} The Vaultt Store. All rights reserved.</p>
             </div>
             
         </div>
@@ -412,11 +406,7 @@ export async function sendOrderShippedEmail(
         to: userEmail,
         subject: `Your Order [#${order}] has been shipped!`,
         html: htmlContent,
-        attachments: [{ // <-- We only attach the logo now
-            filename: 'logo1.png',
-            path: './public/logo1.png',
-            cid: 'logo'
-        }]
+        // No attachments needed since the image is embedded via URL
     };
 
     try {
