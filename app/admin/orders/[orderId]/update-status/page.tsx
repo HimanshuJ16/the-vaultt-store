@@ -2,15 +2,14 @@ import { getOrderById } from "@/lib/sfcc";
 import { UpdateOrderStatusForm } from "../components/update-order-status-form";
 
 interface UpdateOrderStatusPageProps {
-  params: {
-    orderId: string;
-  };
+  params: Promise<{ orderId: string }>;
 }
 
 export default async function UpdateOrderStatusPage({
   params,
 }: UpdateOrderStatusPageProps) {
-  const order = await getOrderById(params.orderId);
+  const { orderId } = await params;
+  const order = await getOrderById(orderId);
 
   if (!order) {
     return <div>Order not found</div>;

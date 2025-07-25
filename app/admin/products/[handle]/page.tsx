@@ -6,9 +6,9 @@ import { notFound } from "next/navigation";
 export default async function EditProductPage({
   params,
 }: {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }) {
-  const { handle } = params;
+  const { handle } = await params;
   const [product, collections] = await Promise.all([
     getProduct(handle),
     getCollections(),

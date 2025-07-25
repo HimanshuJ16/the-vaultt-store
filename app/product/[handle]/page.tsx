@@ -1,5 +1,3 @@
-// commerce/app/product/[handle]/page.tsx
-
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -26,7 +24,7 @@ import { DesktopGallery } from "./components/desktop-gallery";
 export async function generateMetadata({
   params,
 }: {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }): Promise<Metadata> {
   const { handle } = await params;
   const product = await getProduct(handle);
@@ -65,7 +63,7 @@ export async function generateMetadata({
 export default async function ProductPage({
   params,
 }: {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
   const product = await getProduct(handle);

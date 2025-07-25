@@ -6,9 +6,9 @@ import { notFound } from "next/navigation";
 export default async function EditCollectionPage({
   params,
 }: {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }) {
-  const { handle } = params;
+  const { handle } = await params;
   const collection = await getCollection(handle);
 
   if (!collection) {
