@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/app/admin/components/data-table-column-header"
 import { Collection } from "@/lib/sfcc/types"
+import { useRouter } from "next/navigation"
+import { useTransition } from "react"
+import { toast } from "sonner"
 
 export const columns: ColumnDef<Collection>[] = [
   {
@@ -64,6 +67,28 @@ export const columns: ColumnDef<Collection>[] = [
     id: "actions",
     cell: ({ row }) => {
       const collection = row.original
+      const router = useRouter()
+      const [isPending, startTransition] = useTransition()
+
+      const handleDelete = () => {
+        startTransition(async () => {
+          try {
+            const response = await fetch(`/api/admin/collections/${collection.handle}`, {
+              method: "DELETE",
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || "Failed to delete the collection.")
+            }
+
+            toast.success("Collection deleted successfully!")
+            router.refresh()
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "An error occurred.")
+          }
+        })
+      }
 
       return (
         <DropdownMenu>
@@ -84,7 +109,12 @@ export const columns: ColumnDef<Collection>[] = [
             <DropdownMenuItem asChild>
               <Link href={`/admin/collections/${collection.handle}`}>Edit collection</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Delete collection</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? 'Deleting...' : 'Delete collection'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

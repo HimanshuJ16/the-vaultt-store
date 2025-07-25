@@ -6,11 +6,12 @@ import { deleteProduct } from '@/lib/sfcc';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> } // params is a Promise
 ) {
   try {
+    const { handle } = await params; // Await params to get the handle
     const collection = await prisma.collection.findUnique({
-      where: { handle: params.handle },
+      where: { handle },
     });
 
     if (!collection) {
@@ -27,17 +28,22 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> } // params is a Promise
 ) {
   try {
+    const { handle } = await params; // Await params to get the handle
     const body = await req.json();
-    const { title, handle, description } = body;
+    const { title, handle: newHandle, description } = body;
+
+    if (!title || !newHandle || !description) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
 
     const updatedCollection = await prisma.collection.update({
-      where: { handle: params.handle },
+      where: { handle },
       data: {
         title,
-        handle,
+        handle: newHandle,
         description,
       },
     });
@@ -52,13 +58,12 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> } // params is a Promise
 ) {
   try {
-    // Directly delete the collection. Prisma will automatically handle
-    // removing the relations in the join table without deleting the products.
+    const { handle } = await params; // Await params to get the handle
     await prisma.collection.delete({
-      where: { handle: params.handle },
+      where: { handle },
     });
 
     return NextResponse.json({ message: 'Collection deleted successfully' }, { status: 200 });

@@ -46,16 +46,17 @@ export function CollectionForm({ collection }: CollectionFormProps) {
     startTransition(async () => {
       try {
         const method = collection ? 'PUT' : 'POST';
-        const response = await fetch('/api/admin/collections', {
+        const url = collection ? `/api/admin/collections/${collection.handle}` : '/api/admin/collections';
+        const response = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...values, id: collection?.id }),
+          body: JSON.stringify(values), // No need to include id, as handle is used in the URL
         });
-
+      
         if (!response.ok) {
           throw new Error(`Failed to ${collection ? 'update' : 'create'} collection`);
         }
-
+      
         toast.success(`Collection ${collection ? 'updated' : 'created'} successfully!`);
         router.push('/admin/collections');
         router.refresh();
