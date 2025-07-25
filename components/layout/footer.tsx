@@ -9,7 +9,7 @@ export async function Footer() {
 
   return (
     <footer className="p-sides">
-      <div className="w-full h-[532px] p-11 text-background bg-foreground rounded-[12px] flex flex-col justify-between">
+      <div className="w-full h-auto p-11 text-background bg-foreground rounded-[12px] flex flex-col justify-between">
         <div className="flex justify-between items-center flex-wrap gap-4">
           <Image
             src="/logo1.png"
@@ -18,9 +18,9 @@ export async function Footer() {
             height={100}
             className="h-auto w-full max-w-[900px] object-contain md:w-[900px] max-md:mx-auto filter invert"
           />
-          <ShopLinks collections={collections} align="right" />
+          <ShopLinks collections={collections} align="left" />
         </div>
-        <div className="flex justify-between items-end flex-wrap text-muted-foreground">
+        <div className="flex justify-between items-end flex-wrap text-muted-foreground mt-8">
           <SidebarLinks className="max-w-[450px] w-full" size="base" invert />
           <p className="text-base">
             {new Date().getFullYear()}© — All rights reserved
