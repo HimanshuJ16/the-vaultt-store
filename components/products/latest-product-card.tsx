@@ -23,7 +23,7 @@ export function LatestProductCard({
 
   if (principal) {
     return (
-      <div className={cn("h-fold flex flex-col relative", className)}>
+      <div className={cn("h-fold flex flex-col relative w-full", className)}>
         <Link
           href={`/product/${product.handle}`}
           className="size-full"
@@ -39,9 +39,9 @@ export function LatestProductCard({
             className="object-cover size-full"
           />
         </Link>
-        <div className="absolute bottom-0 left-0 grid w-full grid-cols-4 gap-6 pointer-events-none max-md:contents p-sides">
+        <div className="absolute bottom-0 left-0 w-full grid grid-cols-1 md:grid-cols-4 gap-6 p-sides pointer-events-none">
           <FeaturedProductLabel
-            className="col-span-3 col-start-2 pointer-events-auto 2xl:col-start-3 2xl:col-span-2 shrink-0"
+            className="col-span-1 md:col-span-3 md:col-start-2 pointer-events-auto md:2xl:col-start-3 md:2xl:col-span-2 shrink-0 w-full"
             product={product}
             principal
           />

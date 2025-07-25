@@ -22,7 +22,7 @@ export function FeaturedProductLabel({
     return (
       <div
         className={cn(
-          "p-4 bg-white w-fit md:rounded-md flex flex-col md:grid grid-cols-2 gap-y-3",
+          "p-4 bg-white w-full flex flex-col md:grid md:grid-cols-2 gap-y-3",
           className
         )}
       >
