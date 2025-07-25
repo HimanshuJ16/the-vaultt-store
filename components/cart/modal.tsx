@@ -42,15 +42,15 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
         </AnimatePresence>
       </div>
       <div className="py-4 text-sm text-neutral-500 dark:text-neutral-400">
-        <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 dark:border-neutral-700">
+        {/* <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 dark:border-neutral-700">
           <p>Taxes</p>
           <p className="text-right text-base text-black dark:text-white">
             ₹{cart.cost.totalTaxAmount.amount}
           </p>
-        </div>
+        </div> */}
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
           <p>Shipping</p>
-          <p className="text-right">Calculated at checkout</p>
+          <p className="text-right">Free</p>
         </div>
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
           <p>Total</p>
