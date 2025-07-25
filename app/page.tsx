@@ -11,7 +11,13 @@ export default async function Home() {
     getCollections(),
   ]);
 
-  const [lastProduct, ...restProducts] = featuredProducts;
+  // Sort products by createdAt in descending order (newest first)
+  const sortedProducts = featuredProducts.sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Use the first product as the principal product
+  const [lastProduct, ...restProducts] = sortedProducts;
 
   return (
     <PageLayout>
@@ -25,7 +31,7 @@ export default async function Home() {
               </div>
             </div>
           </div>
-          {featuredProducts.length > 0 && (
+          {sortedProducts.length > 0 && (
             <>
               <LatestProductCard
                 className="col-span-2"
