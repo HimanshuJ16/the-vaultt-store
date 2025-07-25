@@ -131,7 +131,7 @@ export function CheckoutForm({ user }: { user: UserData }) {
                 <FormItem>
                   <FormLabel>First name</FormLabel>
                   <FormControl>
-                    <Input {...field} readOnly className="bg-gray-100 cursor-not-allowed" />
+                    <Input {...field} className="bg-gray-100 cursor-not-allowed" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
