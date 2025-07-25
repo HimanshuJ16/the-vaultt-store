@@ -1,17 +1,14 @@
-import { getCollectionProducts, getCollections, getProducts } from "@/lib/sfcc"; // Updated import
+import { getCollections } from "@/lib/sfcc";
 import { ProductListContent } from "./product-list-content";
+import { Product } from "@/lib/sfcc/types";
 
 export default async function ProductList({
   collection,
+  products,
 }: {
-  collection?: string; // Made optional
+  collection?: string;
+  products: Product[];
 }) {
-  // If a collection handle is provided, fetch products for that collection.
-  // Otherwise, fetch all products.
-  const products = collection 
-    ? await getCollectionProducts({ collection })
-    : await getProducts({}); 
-  
   const collections = await getCollections();
 
   return <ProductListContent products={products} collections={collections} />;
