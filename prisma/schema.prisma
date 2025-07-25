@@ -58,6 +58,7 @@ model Collection {
 }
 
 enum OrderStatus {
+  PAID
   PROCESSING
   SHIPPED
   DELIVERED
@@ -66,6 +67,7 @@ enum OrderStatus {
 model Order {
   id              String      @id @default(cuid())
   orderNumber     String      @unique
+  paymentId       String?     @unique // <-- ADDED THIS LINE
   totalAmount     Float
   totalTaxAmount  Float
   shippingAmount  Float

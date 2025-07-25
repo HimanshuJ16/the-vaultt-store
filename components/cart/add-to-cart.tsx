@@ -65,6 +65,7 @@ export function AddToCart({
 
   const handleAddToCart = async () => {
     if (resolvedVariant) {
+      console.log("Adding item to cart:", { variantId: resolvedVariant.id, productTitle: product.title });
       addCartItem(resolvedVariant as ProductVariant, product);
       if (isSignedIn) {
         await addItemAction();
@@ -80,55 +81,48 @@ export function AddToCart({
     return "default";
   };
 
-  const buttonElement = (
-    <Button
-      type="submit"
-      aria-label={getButtonText()}
-      disabled={isDisabled}
-      className={iconOnly ? undefined : "w-full relative flex items-center justify-between"}
-      {...buttonProps}
-    >
-      <AnimatePresence initial={false} mode="wait">
-        {iconOnly ? (
-          <motion.div
-            key={isLoading ? "loading" : "icon"}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.15 }}
-            className="flex items-center justify-center"
-          >
-            {isLoading ? <Loader size={getLoaderSize()} /> : <span>{icon}</span>}
-          </motion.div>
-        ) : (
-          <motion.div
-            key={isLoading ? "loading" : getButtonText()}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="w-full flex items-center justify-center"
-          >
-            {isLoading ? (
-              <Loader size={getLoaderSize()} />
-            ) : (
-              <div className="w-full flex items-center justify-between">
-                <span>{getButtonText()}</span>
-                <PlusCircleIcon />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Button>
-  );
-
   return (
-    <form
-      action={handleAddToCart}
-      className={className}
-    >
-      {buttonElement}
+    <form action={handleAddToCart} className={className}>
+      <Button
+        type="submit"
+        aria-label={getButtonText()}
+        disabled={isDisabled}
+        className={iconOnly ? undefined : "w-full relative flex items-center justify-between"}
+        {...buttonProps}
+      >
+        <AnimatePresence initial={false} mode="wait">
+          {iconOnly ? (
+            <motion.div
+              key={isLoading ? "loading" : "icon"}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center justify-center"
+            >
+              {isLoading ? <Loader size={getLoaderSize()} /> : <span>{icon}</span>}
+            </motion.div>
+          ) : (
+            <motion.div
+              key={isLoading ? "loading" : getButtonText()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="w-full flex items-center justify-center"
+            >
+              {isLoading ? (
+                <Loader size={getLoaderSize()} />
+              ) : (
+                <div className="w-full flex items-center justify-between">
+                  <span>{getButtonText()}</span>
+                  <PlusCircleIcon />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Button>
       <p aria-live="polite" className="sr-only" role="status">
         {message}
       </p>

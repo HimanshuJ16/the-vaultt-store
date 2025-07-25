@@ -6,10 +6,8 @@ import { notFound } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
 
 export default async function CheckoutPage() {
-  const [cart, user] = await Promise.all([
-    getCart(),
-    currentUser()
-  ]);
+ const cart = await getCart();
+ const user = await currentUser();
 
   if (!cart || cart.lines.length === 0) {
     return notFound();

@@ -1,98 +1,22 @@
 "use client";
 
 import { Cart, CartItem, Product, ProductVariant } from "@/lib/sfcc/types";
-import React, {
-  createContext,
-  use,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  useOptimistic,
-} from "react";
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { syncGuestCart } from "./actions";
-
-// --- IndexedDB Helper ---
-const DB_NAME = "guest-cart-db";
-const STORE_NAME = "cart-store";
-
-const openDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore(STORE_NAME, { keyPath: "id" });
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-};
-
-const dbManager = {
-  async getCart(id: string): Promise<Cart | null> {
-    try {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const transaction = db.transaction(STORE_NAME, "readonly");
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.get(id);
-        request.onsuccess = () => resolve(request.result?.cart || null);
-        request.onerror = () => resolve(null);
-      });
-    } catch {
-      return null;
-    }
-  },
-  async setCart(id: string, cart: Cart) {
-    try {
-      const db = await openDB();
-      return new Promise<void>((resolve) => {
-        const transaction = db.transaction(STORE_NAME, "readwrite");
-        const store = transaction.objectStore(STORE_NAME);
-        store.put({ id, cart });
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => resolve();
-      });
-    } catch {
-      // Silently handle errors
-    }
-  },
-  async deleteCart(id: string) {
-    try {
-      const db = await openDB();
-      return new Promise<void>((resolve) => {
-        const transaction = db.transaction(STORE_NAME, "readwrite");
-        const store = transaction.objectStore(STORE_NAME);
-        store.delete(id);
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => resolve();
-      });
-    } catch {
-      // Silently handle errors
-    }
-  },
-};
-// --- End IndexedDB Helper ---
 
 export type UpdateType = "plus" | "minus" | "delete";
 
 type CartAction =
-  | {
-      type: "UPDATE_ITEM";
-      payload: { lineId: string; updateType: UpdateType };
-    }
-  | {
-      type: "ADD_ITEM";
-      payload: { variant: ProductVariant; product: Product; quantity?: number };
-    }
-  | {
-      type: "SET_CART";
-      payload: Cart;
-    };
+  | { type: "UPDATE_ITEM"; payload: { lineId: string; updateType: UpdateType } }
+  | { type: "ADD_ITEM"; payload: { variant: ProductVariant; product: Product; quantity?: number } }
+  | { type: "SET_CART"; payload: Cart | null };
 
 type CartContextType = {
-  cartPromise: Promise<Cart | null>;
+  cart: Cart | null;
+  isLoading: boolean;
+  optimisticUpdate: (lineId: string, updateType: UpdateType) => void;
+  addCartItem: (variant: ProductVariant, product: Product, quantity?: number) => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -101,10 +25,7 @@ function calculateItemCost(quantity: number, price: number): number {
   return price * quantity;
 }
 
-function updateCartItem(
-  item: CartItem,
-  updateType: UpdateType
-): CartItem | null {
+function calculateUpdatedItem(item: CartItem, updateType: UpdateType): CartItem | null {
   if (updateType === "delete") return null;
 
   const newQuantity = updateType === "plus" ? item.quantity + 1 : item.quantity - 1;
@@ -142,7 +63,7 @@ function createOrUpdateCartItem(
     cost: {
       totalAmount: {
         amount: calculateItemCost(newQuantity, price).toString(),
-        currencyCode: product.currencyCode,
+        currencyCode: product.currencyCode || "INR",
       },
     },
     merchandise: {
@@ -158,13 +79,15 @@ function createOrUpdateCartItem(
   };
 }
 
-function updateCartTotals(lines: CartItem[]): Pick<Cart, "totalQuantity" | "cost"> {
+function updateCartTotals(lines: CartItem[]): Pick<Cart, "totalQuantity" | "cost" | "subtotalAmount" | "totalAmount"> {
   const totalQuantity = lines.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = lines.reduce((sum, item) => sum + Number(item.cost.totalAmount.amount), 0);
   const currencyCode = lines[0]?.cost.totalAmount.currencyCode ?? "INR";
 
   return {
     totalQuantity,
+    subtotalAmount: totalAmount,
+    totalAmount: totalAmount,
     cost: {
       subtotalAmount: { amount: totalAmount.toString(), currencyCode },
       totalAmount: { amount: totalAmount.toString(), currencyCode },
@@ -175,6 +98,7 @@ function updateCartTotals(lines: CartItem[]): Pick<Cart, "totalQuantity" | "cost
 }
 
 function createEmptyCart(): Cart {
+  const now = new Date();
   return {
     id: crypto.randomUUID(),
     totalQuantity: 0,
@@ -190,45 +114,121 @@ function createEmptyCart(): Cart {
     totalTaxAmount: 0,
     shippingAmount: 0,
     userId: "",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
     checkoutUrl: "",
   };
 }
 
-function cartReducer(state: Cart | undefined, action: CartAction): Cart {
-  const currentCart = state || createEmptyCart();
-  console.log("Reducer action:", action.type, "Current cart lines:", currentCart.lines.length);
-
+function cartReducer(state: Cart, action: CartAction): Cart {
   switch (action.type) {
     case "UPDATE_ITEM": {
       const { lineId, updateType } = action.payload;
-      const updatedLines = currentCart.lines
-        .map((item) => (item.id === lineId ? updateCartItem(item, updateType) : item))
+      const updatedLines = state.lines
+        .map((item) => (item.id === lineId ? calculateUpdatedItem(item, updateType) : item))
         .filter(Boolean) as CartItem[];
-
-      return { ...currentCart, ...updateCartTotals(updatedLines), lines: updatedLines, updatedAt: new Date() };
+      return { ...state, ...updateCartTotals(updatedLines), lines: updatedLines, updatedAt: new Date() };
     }
     case "ADD_ITEM": {
       const { variant, product, quantity = 1 } = action.payload;
-      const existingItem = currentCart.lines.find((item) => item.merchandise.id === variant.id);
+      const existingItem = state.lines.find((item) => item.merchandise.id === variant.id);
       const updatedItem = createOrUpdateCartItem(existingItem, variant, product, quantity);
       const updatedLines = existingItem
-        ? currentCart.lines.map((item) => (item.merchandise.id === variant.id ? updatedItem : item))
-        : [...currentCart.lines, updatedItem];
-
-      return { ...currentCart, ...updateCartTotals(updatedLines), lines: updatedLines, updatedAt: new Date() };
+        ? state.lines.map((item) => (item.merchandise.id === variant.id ? updatedItem : item))
+        : [...state.lines, updatedItem];
+      return { ...state, ...updateCartTotals(updatedLines), lines: updatedLines, updatedAt: new Date() };
     }
     case "SET_CART": {
-      return { ...action.payload, updatedAt: new Date() };
+      return action.payload ?? createEmptyCart();
     }
     default:
-      return currentCart;
+      return state;
   }
 }
 
-export function CartProvider({ children, cartPromise }: { children: React.ReactNode; cartPromise: Promise<Cart | null> }) {
-  return <CartContext.Provider value={{ cartPromise }}>{children}</CartContext.Provider>;
+export function CartProvider({ children, serverCart }: { children: React.ReactNode; serverCart: Cart | null }) {
+  const [cart, dispatch] = useReducer(cartReducer, serverCart ?? createEmptyCart());
+  const [isLoading, setIsLoading] = useState(true);
+  const { isSignedIn } = useAuth();
+  const [hasSynced, setHasSynced] = useState(false);
+
+  // KEY FIX: Sync with serverCart prop whenever it changes.
+  // This ensures the client state reflects the server state after revalidation.
+  useEffect(() => {
+    if (isSignedIn) {
+      dispatch({ type: "SET_CART", payload: serverCart });
+      if (serverCart) {
+        localStorage.removeItem("guest-cart");
+      }
+    }
+  }, [serverCart, isSignedIn]);
+
+  // Handle initial load for guests and cart syncing on login.
+  useEffect(() => {
+    const initialize = async () => {
+      setIsLoading(true);
+      const guestCartData = localStorage.getItem("guest-cart");
+
+      if (isSignedIn) {
+        // If user is signed in, check if there's a guest cart to sync.
+        if (guestCartData && !hasSynced) {
+          try {
+            const guestCart = JSON.parse(guestCartData);
+            if (guestCart.lines.length > 0) {
+              console.log("Syncing guest cart on sign-in...");
+              const syncedCart = await syncGuestCart(guestCart);
+              dispatch({ type: "SET_CART", payload: syncedCart });
+              localStorage.removeItem("guest-cart");
+            } else {
+              localStorage.removeItem("guest-cart");
+            }
+          } catch (error) {
+            console.error("Failed to parse or sync guest cart:", error);
+          } finally {
+            setHasSynced(true);
+          }
+        }
+      } else {
+        // If user is a guest, load their cart from local storage.
+        try {
+          const guestCart = guestCartData ? JSON.parse(guestCartData) : createEmptyCart();
+          dispatch({ type: "SET_CART", payload: guestCart });
+        } catch (error) {
+          console.error("Failed to load guest cart:", error);
+          dispatch({ type: "SET_CART", payload: createEmptyCart() });
+        }
+      }
+      setIsLoading(false);
+    };
+    initialize();
+  }, [isSignedIn, hasSynced]);
+
+  // Persist guest cart to localStorage
+  useEffect(() => {
+    if (!isSignedIn && !isLoading && cart) {
+      localStorage.setItem("guest-cart", JSON.stringify(cart));
+    }
+  }, [cart, isSignedIn, isLoading]);
+
+  const optimisticUpdate = (lineId: string, updateType: UpdateType) => {
+    dispatch({ type: "UPDATE_ITEM", payload: { lineId, updateType } });
+  };
+
+  const addCartItem = (variant: ProductVariant, product: Product, quantity: number = 1) => {
+    dispatch({ type: "ADD_ITEM", payload: { variant, product, quantity } });
+  };
+
+  const contextValue = useMemo(
+    () => ({
+      cart,
+      isLoading,
+      optimisticUpdate,
+      addCartItem,
+    }),
+    [cart, isLoading]
+  );
+
+  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
@@ -236,95 +236,5 @@ export function useCart() {
   if (context === undefined) {
     throw new Error("useCart must be used within a CartProvider");
   }
-
-  const initialCart = use(context.cartPromise);
-  const { isSignedIn } = useAuth();
-  const [localCart, setLocalCart] = useState<Cart>(createEmptyCart());
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Initialize guest cart
-  useEffect(() => {
-    if (typeof window !== "undefined" && !isSignedIn) {
-      dbManager.getCart("guest-cart").then((cartData) => {
-        const newCart = cartData || createEmptyCart();
-        console.log("Initializing guest cart with lines:", newCart.lines.length);
-        setLocalCart(newCart);
-        setIsLoading(false);
-      }).catch(() => {
-        console.log("Failed to load guest cart, initializing empty");
-        setLocalCart(createEmptyCart());
-        setIsLoading(false);
-      });
-    } else {
-      setLocalCart(createEmptyCart());
-      setIsLoading(false);
-    }
-  }, [isSignedIn]);
-
-  // Sync guest cart on sign-in
-  useEffect(() => {
-    if (isSignedIn && localCart.lines.length > 0) {
-      syncGuestCart(localCart).then(() => {
-        dbManager.deleteCart("guest-cart");
-        setLocalCart(createEmptyCart());
-      }).catch((error) => {
-        console.error("Failed to sync guest cart:", error);
-      });
-    }
-  }, [isSignedIn, localCart]);
-
-  // Persist local cart updates to IndexedDB
-  useEffect(() => {
-    if (!isSignedIn && !isLoading && localCart.lines.length > 0) {
-      console.log("Persisting cart with lines:", localCart.lines.length);
-      dbManager.setCart("guest-cart", localCart);
-    }
-  }, [localCart, isLoading, isSignedIn]);
-
-  const [optimisticCart, dispatch] = useOptimistic(
-    initialCart ?? undefined,
-    cartReducer
-  );
-
-  const cart = isSignedIn ? optimisticCart : localCart;
-
-  const updateCartItem = useCallback((lineId: string, updateType: UpdateType) => {
-    if (isSignedIn) {
-      dispatch({ type: "UPDATE_ITEM", payload: { lineId, updateType } });
-    } else {
-      setLocalCart((prevCart) => {
-        const updatedCart = cartReducer(prevCart, {
-          type: "UPDATE_ITEM",
-          payload: { lineId, updateType },
-        });
-        console.log("Updated cart lines after update:", updatedCart.lines.length);
-        return updatedCart;
-      });
-    }
-  }, [dispatch, isSignedIn]);
-
-  const addCartItem = useCallback((variant: ProductVariant, product: Product, quantity: number = 1) => {
-    if (isSignedIn) {
-      dispatch({ type: "ADD_ITEM", payload: { variant, product, quantity } });
-    } else {
-      setLocalCart((prevCart) => {
-        const updatedCart = cartReducer(prevCart, {
-          type: "ADD_ITEM",
-          payload: { variant, product, quantity },
-        });
-        console.log("Added item, new cart lines:", updatedCart.lines.length);
-        return updatedCart;
-      });
-    }
-  }, [dispatch, isSignedIn]);
-
-  return useMemo(
-    () => ({
-      cart,
-      isLoading,
-      updateCartItem,
-      addCartItem,
-    }),
-    [cart, isLoading, updateCartItem, addCartItem]
-  );
+  return context;
 }

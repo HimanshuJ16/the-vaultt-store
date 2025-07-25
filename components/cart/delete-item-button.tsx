@@ -2,47 +2,42 @@
 
 import { removeItem } from "@/components/cart/actions";
 import { CartItem } from "@/lib/sfcc/types";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { Button } from "../ui/button";
-import { UpdateType } from "./cart-context";
+import { UpdateType, useCart } from "./cart-context";
 import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
+import { Loader } from "../ui/loader";
 
-export function DeleteItemButton({
-  item,
-  optimisticUpdate,
-}: {
-  item: CartItem;
-  optimisticUpdate: (lineId: string, updateType: UpdateType) => void;
-}) {
-  const [message, formAction] = useActionState(removeItem, null);
+export function DeleteItemButton({ item }: { item: CartItem;}) {
+  const { optimisticUpdate } = useCart();
+  const [message, formAction] = useActionState<string | null, string>(removeItem, null);
+  const [isPending, startTransition] = useTransition();
   const { isSignedIn } = useAuth();
   const lineId = item.id;
-  const removeItemAction = formAction.bind(null, lineId);
 
-  const handleDelete = async () => {
+  const actionWithOptimisticUpdate = () => {
     optimisticUpdate(lineId, "delete");
     if (isSignedIn) {
-      await removeItemAction();
+        startTransition(() => {
+            formAction(lineId);
+        });
     }
-  };
+  }
 
   return (
-    <form
-      className="-mr-1 -mb-1 opacity-70"
-      action={handleDelete}
-    >
+    <form action={actionWithOptimisticUpdate} className="-mr-1 -mb-1">
       <Button
         type="submit"
         size="sm"
         variant="ghost"
         aria-label="Remove item"
-        className="px-2 text-sm"
+        disabled={isPending}
+        className="px-2 text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
       >
-        Remove
+        {isPending ? <Loader size="sm" /> : "Remove"}
       </Button>
-      <p aria-live="polite" className="sr-only" role="status">
-        {message}
-      </p>
+      {message && <p className="text-xs text-red-500 mt-1">{message}</p>}
     </form>
   );
 }

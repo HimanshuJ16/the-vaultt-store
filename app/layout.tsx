@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+// The getCart function is now directly awaited
 import { getCart, getUserId } from "@/lib/sfcc";
 import { CartProvider } from "@/components/cart/cart-context";
 import { DebugGrid } from "@/components/debug-grid";
@@ -32,17 +33,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cart = getCart();
-  await getUserId(); // This will create the user in the DB if they don't exist
+  // CORRECT: Await the promise to get the cart data directly.
+  const cart = await getCart(); 
+  // Ensure user is created in the DB if they exist in Clerk
+  await getUserId();
 
   return (
-    <ClerkProvider >
+    <ClerkProvider>
       <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
           suppressHydrationWarning
         >
-          <CartProvider cartPromise={cart}>
+          {/* Provide the resolved cart data, not the promise */}
+          <CartProvider serverCart={cart}>
             <NuqsAdapter>
               <ConditionalLayout
                 header={<HeaderWithData />}

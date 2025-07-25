@@ -1,19 +1,19 @@
 "use client";
 
-import { ArrowRight, PlusCircleIcon } from "lucide-react";
+import { ArrowRight, PlusCircleIcon, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { createCartAndSetCookie } from "./actions";
-import { useCart } from "./cart-context";
+import { useEffect, useState, useTransition } from "react";
+import { UpdateType, useCart } from "./cart-context";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "../ui/button";
 import { CartItemCard } from "./cart-item";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import React from "react";
+import { Loader } from "../ui/loader";
 
 const CartItems = ({ closeCart }: { closeCart: () => void }) => {
-  const { cart, updateCartItem } = useCart();
+  const { cart } = useCart();
 
   if (!cart) return null;
 
@@ -29,25 +29,19 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
             .sort((a, b) => a.merchandise.product.title.localeCompare(b.merchandise.product.title))
             .map((item, i) => (
               <motion.div
-                key={item.merchandise.id}
+                key={item.id} // Use item.id as key for stability
                 layout
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3, delay: i * 0.1, ease: "easeOut" }}
+                transition={{ duration: 0.3, delay: i * 0.05, ease: "easeOut" }}
               >
-                <CartItemCard item={item} optimisticUpdate={updateCartItem} onCloseCart={closeCart} />
+                <CartItemCard item={item} onCloseCart={closeCart} />
               </motion.div>
             ))}
         </AnimatePresence>
       </div>
       <div className="py-4 text-sm text-neutral-500 dark:text-neutral-400">
-        {/* <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 dark:border-neutral-700">
-          <p>Taxes</p>
-          <p className="text-right text-base text-black dark:text-white">
-            ₹{cart.cost.totalTaxAmount.amount}
-          </p>
-        </div> */}
         <div className="mb-3 flex items-center justify-between border-b border-neutral-200 pb-1 pt-1 dark:border-neutral-700">
           <p>Shipping</p>
           <p className="text-right">Free</p>
@@ -59,7 +53,7 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
           </p>
         </div>
       </div>
-      <CheckoutButton />
+      <CheckoutButton closeCart={closeCart} />
     </div>
   );
 };
@@ -67,43 +61,31 @@ const CartItems = ({ closeCart }: { closeCart: () => void }) => {
 export default function CartModal() {
   const { cart, isLoading } = useCart();
   const [isOpen, setIsOpen] = useState(false);
-  const [cartQuantity, setCartQuantity] = useState(0);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setCartQuantity(cart?.totalQuantity || 0);
-    }
-  }, [cart?.totalQuantity, isLoading]);
-
-  const quantityRef = useRef(cart?.totalQuantity);
-  const openCart = () => setIsOpen(true);
-  const closeCart = () => setIsOpen(false);
   const pathname = usePathname();
+  const lastCartQuantity = React.useRef(cart?.totalQuantity);
 
+  // Automatically open the cart when an item is added, but not on initial load.
   useEffect(() => {
-    if (!isLoading && !cart) {
-      createCartAndSetCookie();
-    }
-  }, [cart, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading && cart?.totalQuantity && cart.totalQuantity > (quantityRef.current ?? 0)) {
-      if (!isOpen) {
+    if (!isLoading && cart?.totalQuantity !== undefined && lastCartQuantity.current !== undefined) {
+      if (cart.totalQuantity > lastCartQuantity.current) {
         setIsOpen(true);
       }
     }
-    quantityRef.current = cart?.totalQuantity;
-  }, [isOpen, cart?.totalQuantity, isLoading]);
+    lastCartQuantity.current = cart?.totalQuantity;
+  }, [cart?.totalQuantity, isLoading]);
 
+  // Close cart on navigation to checkout page.
   useEffect(() => {
-    if (pathname === "/checkout") closeCart();
+    if (pathname === "/checkout") {
+      setIsOpen(false);
+    }
   }, [pathname]);
 
   const renderCartContent = () => {
     if (isLoading) {
       return (
         <div className="flex items-center justify-center h-full">
-          <span>Loading cart...</span>
+          <Loader size="lg" />
         </div>
       );
     }
@@ -118,7 +100,11 @@ export default function CartModal() {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full flex"
           >
-            <Link href="/" className="bg-background rounded-lg p-2 border border-dashed border-border w-full" onClick={closeCart}>
+            <Link
+              href="/"
+              className="bg-background rounded-lg p-2 border border-dashed border-border w-full"
+              onClick={() => setIsOpen(false)}
+            >
               <div className="flex flex-row gap-6">
                 <div className="relative size-20 overflow-hidden rounded-sm shrink-0 border border-dashed border-border flex items-center justify-center">
                   <PlusCircleIcon className="size-6 text-muted-foreground" />
@@ -133,13 +119,18 @@ export default function CartModal() {
         </AnimatePresence>
       );
     }
-    return <CartItems closeCart={closeCart} />;
+    return <CartItems closeCart={() => setIsOpen(false)} />;
   };
 
   return (
     <>
-      <Button aria-label="Open cart" onClick={openCart} className="uppercase" size={"sm"}>
-        <span className="max-md:hidden">cart</span> ({cartQuantity})
+      <Button
+        aria-label="Open cart"
+        onClick={() => setIsOpen(true)}
+        className="uppercase"
+        size="sm"
+      >
+        <span className="max-md:hidden">cart</span>&nbsp;({isLoading ? '...' : cart?.totalQuantity || 0})
       </Button>
       <AnimatePresence>
         {isOpen && (
@@ -149,22 +140,29 @@ export default function CartModal() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="fixed inset-0 bg-foreground/30 z-50"
-              onClick={closeCart}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setIsOpen(false)}
               aria-hidden="true"
             />
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="fixed top-0 bottom-0 right-0 flex w-full md:w-[500px] p-modal-sides z-50"
+              transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+              className="fixed top-0 bottom-0 right-0 flex w-full max-w-lg flex-col bg-muted z-50 shadow-2xl"
             >
-              <div className="flex flex-col bg-muted p-3 md:p-4 rounded w-full">
-                <div className="pl-2 flex items-baseline justify-between mb-10">
+              <div className="flex items-center justify-between p-4 border-b">
                   <p className="text-2xl font-semibold">Cart</p>
-                  <Button size="sm" variant="ghost" aria-label="Close cart" onClick={closeCart}>Close</Button>
-                </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Close cart"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <X size={20} />
+                  </Button>
+              </div>
+              <div className="flex-grow p-4 overflow-y-auto">
                 {renderCartContent()}
               </div>
             </motion.div>
@@ -175,21 +173,27 @@ export default function CartModal() {
   );
 }
 
-function CheckoutButton() {
+function CheckoutButton({ closeCart }: { closeCart: () => void }) {
   const { isSignedIn } = useAuth();
   const router = useRouter();
-  const [isPending, startTransition] = React.useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const handleClick = () => {
+    const destination = isSignedIn ? "/checkout" : "/sign-in";
     startTransition(() => {
-      router.push(isSignedIn ? "/checkout" : "/sign-in");
+      closeCart();
+      router.push(destination);
     });
   };
 
   return (
-    <Button onClick={handleClick} disabled={isPending} size="lg" className="w-full relative flex items-center justify-between gap-3">
-      {isPending ? "Processing..." : "Proceed to Checkout"}
-      <ArrowRight className="size-6" />
+    <Button
+      onClick={handleClick}
+      disabled={isPending}
+      size="lg"
+      className="w-full relative flex items-center justify-center gap-3"
+    >
+      {isPending ? <Loader /> : <><span>Proceed to Checkout</span><ArrowRight className="size-5" /></>}
     </Button>
   );
 }

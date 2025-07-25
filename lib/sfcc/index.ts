@@ -25,35 +25,28 @@ import { sendWelcomeEmail } from '../email';
 export async function getUserId() {
   const { userId: clerkId } = await auth();
   if (!clerkId) {
-    // This will be treated as a guest user
     return null;
   }
 
-  // Check if a user with this Clerk ID already exists in your database
   let user = await prisma.user.findUnique({
     where: { clerkId },
   });
 
-  // If the user doesn't exist, create a new user entry
   if (!user) {
-    // Fetch user details from Clerk
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(clerkId);
     if (!clerkUser) {
       throw new Error("Clerk user not found");
     }
 
-    // Extract the primary email address
     const email = clerkUser.emailAddresses[0]?.emailAddress;
     if (!email) {
-      // Handle cases where an email might not be available
       throw new Error("User does not have a primary email address");
     }
 
-    const fullName = `${clerkUser.firstName} ${clerkUser.lastName}`;
+    const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
 
-    // Create a new user in your local database
-    const newUser = await prisma.user.create({
+    user = await prisma.user.create({
       data: {
         clerkId,
         email,
@@ -61,102 +54,74 @@ export async function getUserId() {
       },
     });
 
-    // Send the welcome email to the new user
     try {
-      await sendWelcomeEmail(newUser.email, newUser.fullName ?? '');
-      console.log(`Welcome email sent to ${newUser.email}`);
+      await sendWelcomeEmail(user.email, user.fullName ?? '');
+      console.log(`Welcome email sent to ${user.email}`);
     } catch (error) {
       console.error(`Failed to send welcome email: ${error}`);
-      // You might want to handle this error, but not block the user creation
     }
-
-    return newUser.id;
   }
 
   return user.id;
 }
 
-
-// Helper to get the cart ID from cookies
 async function getCartId() {
   return (await cookies()).get('cartId')?.value;
 }
 
-// Helper to get or create a cart for the current user
 async function getOrCreateCart(): Promise<Cart> {
-  let cartId = await getCartId();
   const userId = await getUserId();
 
   if (!userId) {
-    throw new Error('User not authenticated. Please sign in to add items to your cart.');
+    throw new Error('User not authenticated. Please sign in to manage your cart.');
   }
-  
-  const userCart = await prisma.cart.findUnique({
+
+  let cart = await prisma.cart.findFirst({
     where: { userId },
     include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
   });
 
-  if (userCart) {
-    cartId = userCart.id;
-  }
-
-  if (cartId) {
-    const cart = await prisma.cart.findUnique({
-      where: { id: cartId },
+  if (!cart) {
+    cart = await prisma.cart.create({
+      data: {
+        userId,
+        totalQuantity: 0,
+        subtotalAmount: 0,
+        totalAmount: 0,
+        totalTaxAmount: 0,
+        shippingAmount: 0,
+      },
       include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
     });
-    if (cart) {
-      return {
-        ...cart,
-        checkoutUrl: '/checkout',
-        lines: cart.items.map(item => ({
-          ...item,
-          cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
-          merchandise: {
-            id: item.productVariantId || item.productId,
-            title: item.product.title,
-            selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
-            product: item.product
-          }
-        })),
-        cost: {
-          subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'INR' },
-          totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'INR' },
-          totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'INR' },
-          shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'INR' },
-        }
-      };
+    (await cookies()).set('cartId', cart.id, { httpOnly: true, maxAge: 60 * 60 * 24 * 30 });
+  } else {
+    const cartId = await getCartId();
+    if (cartId && cartId !== cart.id) {
+      (await cookies()).set('cartId', cart.id, { httpOnly: true, maxAge: 60 * 60 * 24 * 30 });
     }
   }
 
-  const newCart = await prisma.cart.create({
-    data: {
-      userId,
-      totalQuantity: 0,
-      subtotalAmount: 0,
-      totalAmount: 0,
-      totalTaxAmount: 0,
-      shippingAmount: 0,
-    }
-  });
-
-  (await cookies()).set('cartId', newCart.id, { httpOnly: true, maxAge: 60 * 60 * 24 * 30 });
-
   return {
-    ...newCart,
+    ...cart,
     checkoutUrl: '/checkout',
-    lines: [],
+    lines: cart.items.map(item => ({
+      ...item,
+      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: 'INR' } },
+      merchandise: {
+        id: item.productVariantId || item.productId,
+        title: item.product.title,
+        selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
+        product: item.product
+      }
+    })),
     cost: {
-      subtotalAmount: { amount: '0', currencyCode: 'INR' },
-      totalAmount: { amount: '0', currencyCode: 'INR' },
-      totalTaxAmount: { amount: '0', currencyCode: 'INR' },
-      shippingAmount: { amount: '0', currencyCode: 'INR' },
+      subtotalAmount: { amount: cart.subtotalAmount.toString(), currencyCode: 'INR' },
+      totalAmount: { amount: cart.totalAmount.toString(), currencyCode: 'INR' },
+      totalTaxAmount: { amount: cart.totalTaxAmount.toString(), currencyCode: 'INR' },
+      shippingAmount: { amount: cart.shippingAmount.toString(), currencyCode: 'INR' },
     }
   };
 }
-
-
-//- COLLECTION & PRODUCT FUNCTIONS
 
 export async function getCollections(): Promise<Collection[]> {
   const collections = await prisma.collection.findMany({
@@ -230,24 +195,21 @@ export async function getProductRecommendations(productId: string): Promise<Prod
   });
 }
 
-//- CART FUNCTIONS
-
 export async function createCart(): Promise<Cart> {
   return getOrCreateCart();
 }
 
 export async function getCart(): Promise<Cart | null> {
-  const cartId = await getCartId();
-  if (!cartId) return null;
+  const userId = await getUserId();
+  if (!userId) return null;
 
-  const cart = await prisma.cart.findUnique({
-    where: { id: cartId },
+  const cart = await prisma.cart.findFirst({
+    where: { userId },
     include: { items: { include: { product: { include: { images: true, options: true, variants: { include: { images: true } }, collections: true } }, productVariant: true } } }
   });
 
   if (!cart) return null;
 
-  // Simplified reshape
   return {
     ...cart,
     checkoutUrl: '/checkout',
@@ -279,7 +241,6 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
     let price: number | undefined;
     let productVariantId: string | null = null;
 
-    // Check if the merchandiseId is a variant ID
     variant = await prisma.productVariant.findUnique({ where: { id: line.merchandiseId }, include: { images: true } });
 
     if (variant) {
@@ -287,17 +248,18 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
       price = variant.price;
       productVariantId = variant.id;
     } else {
-      // Assume it's a product ID
       product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       if (product) {
         price = product.price;
       }
     }
 
-    if (!product || price === undefined) continue;
+    if (!product || price === undefined) {
+      throw new Error(`Product or variant with ID ${line.merchandiseId} not found or missing price`);
+    }
 
     const existingItem = await prisma.cartItem.findFirst({
-      where: { cartId: cart.id, productId: product.id, productVariantId: productVariantId } // check for both product and variant
+      where: { cartId: cart.id, productId: product.id, productVariantId: productVariantId }
     });
 
     if (existingItem) {
@@ -321,7 +283,6 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
     }
   }
 
-  // After adding/updating items, we need to recalculate cart totals.
   const updatedCartItems = await prisma.cartItem.findMany({
     where: { cartId: cart.id }
   });
@@ -333,65 +294,99 @@ export async function addToCart(lines: { merchandiseId: string; quantity: number
     where: { id: cart.id },
     data: {
       totalQuantity,
-      subtotalAmount: totalAmount, // assuming subtotal is sum of item totals
-      totalAmount: totalAmount, // assuming total is same as subtotal for now
+      subtotalAmount: totalAmount,
+      totalAmount: totalAmount,
     }
   });
-
 
   revalidateTag(TAGS.cart);
   const updatedCart = await getCart();
   if (!updatedCart) {
-      throw new Error("Failed to get updated cart");
+    throw new Error("Failed to get updated cart");
   }
   return updatedCart;
 }
 
-
 export async function removeFromCart(lineIds: string[]): Promise<Cart> {
-  const cartId = await getCartId();
-  if (!cartId) throw new Error('Cart not found');
+  const cart = await getCart();
+  if (!cart) {
+    throw new Error('Cart not found');
+  }
 
-  await prisma.cartItem.deleteMany({ where: { id: { in: lineIds }, cartId } });
+  const existingItems = await prisma.cartItem.findMany({
+    where: { id: { in: lineIds }, cartId: cart.id }
+  });
+
+  if (existingItems.length === 0) {
+    throw new Error('No matching cart items found for the provided line IDs');
+  }
+
+  await prisma.cartItem.deleteMany({ where: { id: { in: lineIds }, cartId: cart.id } });
+
+  const updatedCartItems = await prisma.cartItem.findMany({
+    where: { cartId: cart.id }
+  });
+
+  const totalQuantity = updatedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalAmount = updatedCartItems.reduce((sum, item) => sum + item.totalAmount, 0);
+
+  await prisma.cart.update({
+    where: { id: cart.id },
+    data: {
+      totalQuantity,
+      subtotalAmount: totalAmount,
+      totalAmount: totalAmount,
+    }
+  });
 
   revalidateTag(TAGS.cart);
   const updatedCart = await getCart();
-    if (!updatedCart) {
-        throw new Error("Failed to get updated cart");
-    }
-    return updatedCart;
+  if (!updatedCart) {
+    throw new Error("Failed to get updated cart");
+  }
+  return updatedCart;
 }
 
 export async function updateCart(lines: { id: string; merchandiseId: string; quantity: number }[]): Promise<Cart> {
-  const cartId = await getCartId();
-  if (!cartId) throw new Error('Cart not found');
+  const cart = await getCart();
+  if (!cart) {
+    throw new Error('Cart not found');
+  }
 
   for (const line of lines) {
     let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collections: any[]}) | null = null;
     let variant: (ProductVariant & {images: any[]}) | null = null;
     let price: number | undefined;
 
-    // Check if the merchandiseId is a variant ID
     variant = await prisma.productVariant.findUnique({ where: { id: line.merchandiseId }, include: { images: true } });
 
     if (variant) {
       product = await prisma.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       price = variant.price;
     } else {
-      // Assume it's a product ID
       product = await prisma.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
       if (product) {
         price = product.price;
       }
     }
 
-    if (!product || price === undefined) continue;
+    if (!product || price === undefined) {
+      throw new Error(`Product or variant with ID ${line.merchandiseId} not found or missing price`);
+    }
+
+    const existingItem = await prisma.cartItem.findFirst({
+      where: { id: line.id, cartId: cart.id }
+    });
+
+    if (!existingItem) {
+      throw new Error(`Cart item with ID ${line.id} not found`);
+    }
 
     if (line.quantity === 0) {
       await prisma.cartItem.delete({ where: { id: line.id } });
     } else {
       await prisma.cartItem.update({
-        where: { id: line.id, cartId },
+        where: { id: line.id },
         data: {
           quantity: line.quantity,
           totalAmount: price * line.quantity,
@@ -399,52 +394,127 @@ export async function updateCart(lines: { id: string; merchandiseId: string; qua
       });
     }
   }
-  // After adding/updating items, we need to recalculate cart totals.
+
   const updatedCartItems = await prisma.cartItem.findMany({
-    where: { cartId: cartId }
+    where: { cartId: cart.id }
   });
 
   const totalQuantity = updatedCartItems.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = updatedCartItems.reduce((sum, item) => sum + item.totalAmount, 0);
 
   await prisma.cart.update({
-    where: { id: cartId },
+    where: { id: cart.id },
     data: {
       totalQuantity,
-      subtotalAmount: totalAmount, // assuming subtotal is sum of item totals
-      totalAmount: totalAmount, // assuming total is same as subtotal for now
+      subtotalAmount: totalAmount,
+      totalAmount: totalAmount,
     }
   });
 
-
   revalidateTag(TAGS.cart);
   const updatedCart = await getCart();
+  if (!updatedCart) {
+    throw new Error("Failed to get updated cart");
+  }
+  return updatedCart;
+}
+
+
+/**
+ * Merges items from a guest cart into a user's server cart.
+ * This is more efficient than calling `addToCart` repeatedly.
+ */
+export async function mergeAndGetCart(lines: { merchandiseId: string; quantity: number }[]): Promise<Cart> {
+    const cart = await getOrCreateCart(); // Ensures a cart exists for the user
+
+    await prisma.$transaction(async (tx) => {
+        for (const line of lines) {
+            let product: (Product & {images: any[], options: any[], variants: (ProductVariant & {images: any[]})[], collections: any[]}) | null = null;
+            let variant: (ProductVariant & {images: any[]}) | null = null;
+            let price: number | undefined;
+            let productVariantId: string | null = null;
+
+            variant = await tx.productVariant.findUnique({ where: { id: line.merchandiseId }, include: { images: true } });
+
+            if (variant) {
+                product = await tx.product.findUnique({ where: { id: variant.productId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
+                price = variant.price;
+                productVariantId = variant.id;
+            } else {
+                product = await tx.product.findUnique({ where: { id: line.merchandiseId }, include: { images: true, options: true, variants: { include: { images: true } }, collections: true } });
+                if (product) price = product.price;
+            }
+
+            if (!product || price === undefined) {
+                console.warn(`Product or variant with ID ${line.merchandiseId} not found during merge. Skipping.`);
+                continue;
+            }
+
+            const existingItem = await tx.cartItem.findFirst({
+                where: { cartId: cart.id, productId: product.id, productVariantId: productVariantId }
+            });
+
+            if (existingItem) {
+                await tx.cartItem.update({
+                    where: { id: existingItem.id },
+                    data: {
+                        quantity: { increment: line.quantity },
+                        totalAmount: { increment: price * line.quantity }
+                    }
+                });
+            } else {
+                await tx.cartItem.create({
+                    data: {
+                        cartId: cart.id,
+                        productId: product.id,
+                        productVariantId: productVariantId,
+                        quantity: line.quantity,
+                        totalAmount: price * line.quantity,
+                    },
+                });
+            }
+        }
+    });
+
+    // Recalculate cart totals after merging
+    const updatedCartItems = await prisma.cartItem.findMany({
+        where: { cartId: cart.id }
+    });
+
+    const totalQuantity = updatedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalAmount = updatedCartItems.reduce((sum, item) => sum + item.totalAmount, 0);
+
+    await prisma.cart.update({
+        where: { id: cart.id },
+        data: {
+            totalQuantity,
+            subtotalAmount: totalAmount,
+            totalAmount: totalAmount,
+        }
+    });
+
+    revalidateTag(TAGS.cart);
+    const updatedCart = await getCart();
     if (!updatedCart) {
-        throw new Error("Failed to get updated cart");
+        throw new Error("Failed to get updated cart after merge");
     }
     return updatedCart;
 }
 
-//- CHECKOUT & ORDER FUNCTIONS (Placeholders - requires more complex logic)
 
 export async function updateCustomerInfo(email: string): Promise<void> {
-  // In a real app, you'd associate this with the user or a guest checkout session
   console.log(`Updating checkout email to: ${email}`);
 }
 
 export async function updateShippingAddress(address: Address): Promise<void> {
-  // This would update the shipping address on the cart or a checkout object
   console.log('Updating shipping address:', address);
 }
 
 export async function updateBillingAddress(address: Address): Promise<void> {
-  // This would update the billing address on the cart or a checkout object
   console.log('Updating billing address:', address);
 }
 
 export async function getShippingMethods(): Promise<ShippingMethod[]> {
-  // This would typically calculate shipping rates based on address and cart contents.
-  // Returning static data for now.
   return [
     {
       id: 'standard-shipping',
@@ -463,13 +533,10 @@ export async function getShippingMethods(): Promise<ShippingMethod[]> {
 }
 
 export async function updateShippingMethod(shippingMethodId: string): Promise<void> {
-  // This would update the selected shipping method on the cart/checkout
   console.log(`Updating shipping method to: ${shippingMethodId}`);
 }
 
 export async function addPaymentMethod(paymentData: any): Promise<void> {
-  // This is a placeholder for integrating with a payment provider like Stripe or Braintree.
-  // NEVER handle raw card data directly.
   console.log('Adding payment method (placeholder):', paymentData.cardholderName);
 }
 
@@ -478,10 +545,9 @@ export async function placeOrder({ shippingAddress, email, contactNumber }: { sh
   const userId = await getUserId();
 
   if (!cart || !userId || cart.lines.length === 0) {
-    throw new Error('Cannot place an empty order.');
+    throw new Error('Cannot place an empty order or user/cart not found.');
   }
 
-  // Format the address string
   const formattedAddress = [
     shippingAddress.address1,
     shippingAddress.city,
@@ -489,38 +555,40 @@ export async function placeOrder({ shippingAddress, email, contactNumber }: { sh
     shippingAddress.country
   ].filter(Boolean).join(', ');
 
-  const newOrder = await prisma.order.create({
-    data: {
-      userId,
-      orderNumber: `ORDER-${Date.now()}`,
-      totalAmount: cart.totalAmount,
-      totalTaxAmount: cart.totalTaxAmount,
-      shippingAmount: cart.shippingAmount,
-      customerEmail: email,
-      contactNumber: contactNumber,
-      shippingAddress: formattedAddress,
-      billingAddress: formattedAddress, // Assuming billing is same as shipping for now
-      shippingMethod: 'Standard Shipping', // Placeholder
-      items: {
-        create: cart.lines.map(item => ({
-          productId: item.productId,
-          productVariantId: item.productVariantId,
-          quantity: item.quantity,
-          totalAmount: item.totalAmount,
-        }))
-      }
-    },
-    include: { items: { include: { product: true, productVariant: true } } }
-  });
-  
-  // Clear the cart
-  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-  await prisma.cart.delete({ where: { id: cart.id } });
-  (await cookies()).delete('cartId');
+  const newOrder = await prisma.$transaction(async (tx) => {
+    const order = await tx.order.create({
+      data: {
+        userId,
+        orderNumber: `ORDER-${Date.now()}`,
+        totalAmount: cart.totalAmount,
+        totalTaxAmount: cart.totalTaxAmount,
+        shippingAmount: cart.shippingAmount,
+        customerEmail: email,
+        contactNumber: contactNumber,
+        shippingAddress: formattedAddress,
+        billingAddress: formattedAddress,
+        shippingMethod: 'Standard Shipping',
+        items: {
+          create: cart.lines.map(item => ({
+            productId: item.productId,
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+            totalAmount: item.totalAmount,
+          }))
+        }
+      },
+      include: { items: { include: { product: true, productVariant: true } } }
+    });
 
+    await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+    await tx.cart.delete({ where: { id: cart.id } });
+
+    return order;
+  });
+
+  (await cookies()).delete('cartId');
   revalidateTag(TAGS.cart);
 
-  // Reshape the order to match the expected type
   return {
     ...newOrder,
     lines: newOrder.items.map(item => ({
@@ -532,10 +600,10 @@ export async function placeOrder({ shippingAddress, email, contactNumber }: { sh
         selectedOptions: (item.productVariant?.selectedOptions as SelectedOptions) || [],
         product: {
           ...item.product,
-          images: [], 
+          images: [],
           options: [],
           variants: [],
-          collections: [], 
+          collections: [],
         }
       }
     })),
@@ -556,7 +624,6 @@ export async function getCheckoutOrder(orderId: string): Promise<Order | null> {
 
   if (!order) return null;
 
-  // Simplified reshape
   return {
     ...order,
     lines: order.items.map(item => ({
@@ -573,10 +640,7 @@ export async function getCheckoutOrder(orderId: string): Promise<Order | null> {
   };
 }
 
-//- REVALIDATION
-
 export async function revalidate(req: NextRequest): Promise<NextResponse> {
-  // This function can be called by a webhook or admin action to revalidate cached data.
   const path = req.nextUrl.searchParams.get('path');
 
   if (path) {
@@ -590,8 +654,6 @@ export async function revalidate(req: NextRequest): Promise<NextResponse> {
     message: 'Missing path to revalidate',
   });
 }
-
-//- ADMIN FUNCTIONS
 
 export async function getOrders(): Promise<Order[]> {
   const orders = await prisma.order.findMany({
@@ -655,7 +717,6 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       return null;
     }
 
-    // Reshape the order to match the application's Order type
     return {
       ...order,
       lines: order.items.map(item => ({
@@ -695,21 +756,11 @@ export type DetailedOrder = PrismaOrder & {
     })[];
 };
 
-/**
- * Fetches a single order with its associated user and item details.
- * This function returns a simplified object that directly matches the database structure,
- * avoiding the complex reshaping that caused type errors.
- *
- * @param orderId The ID of the order to fetch.
- * @returns A detailed order object, or null if not found.
- */
 export async function getOrderDetails(orderId: string): Promise<DetailedOrder | null> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        // Include the full user object to access name, email, etc.
         user: true,
-        // Include the items and their nested product/variant details
         items: {
           include: {
             product: true,
@@ -719,8 +770,6 @@ export async function getOrderDetails(orderId: string): Promise<DetailedOrder | 
       },
     });
 
-    // The 'order' object from Prisma now perfectly matches our 'DetailedOrder' type.
-    // No complex reshaping is needed. We can just return it.
     return order;
 }
 
@@ -739,29 +788,20 @@ export async function deleteProduct(handle: string): Promise<void> {
   }
 
   const variantIds = product.variants.map(variant => variant.id);
-  
-  // Start a transaction to ensure all or no operations are performed
+
   await prisma.$transaction([
-    // Delete items that reference product variants
     prisma.orderItem.deleteMany({ where: { productVariantId: { in: variantIds } } }),
     prisma.cartItem.deleteMany({ where: { productVariantId: { in: variantIds } } }),
-    
-    // Delete items that reference the product directly
     prisma.orderItem.deleteMany({ where: { productId: product.id } }),
     prisma.cartItem.deleteMany({ where: { productId: product.id } }),
-    
-    // Delete product-specific data
     prisma.productVariant.deleteMany({ where: { productId: product.id } }),
     prisma.productOption.deleteMany({ where: { productId: product.id } }),
     prisma.image.deleteMany({ where: { productId: product.id } }),
-    
-    // Finally, delete the product itself
     prisma.product.delete({ where: { handle } })
   ]);
 
   revalidateTag(TAGS.products);
 }
-
 
 export async function deleteCollection(handle: string): Promise<void> {
   await prisma.collection.delete({
