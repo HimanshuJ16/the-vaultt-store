@@ -68,7 +68,7 @@ export default function CartModal() {
   useEffect(() => {
     if (!isLoading && cart?.totalQuantity !== undefined && lastCartQuantity.current !== undefined) {
       if (cart.totalQuantity > lastCartQuantity.current) {
-        setIsOpen(true);
+        setIsOpen(false);
       }
     }
     lastCartQuantity.current = cart?.totalQuantity;
