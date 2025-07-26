@@ -60,13 +60,14 @@ export async function POST(req: NextRequest) {
     // Transform the order data to match the OrderDetails interface
     const orderForEmail = {
       id: orderWithItems.id,
+      orderNumber: orderWithItems.orderNumber,
       totalAmount: orderWithItems.totalAmount,
       createdAt: orderWithItems.createdAt,
       shippingAddress: {
           line1: shippingAddress.line1,
           city: shippingAddress.city,
           state: shippingAddress.state,
-          postal_code: shippingAddress.zip,
+          postal_code: shippingAddress.postal_code,
           country: shippingAddress.country,
       },
       paymentId: razorpay_payment_id,
