@@ -23,7 +23,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
 
       {/* Interactive Overlay */}
       <div className="absolute inset-0 w-full p-2 pointer-events-none">
-        <div className="max-md:hidden w-full flex gap-6 justify-between items-baseline font-semibold px-3 py-1 group-hover:opacity-0 group-focus-visible:opacity-0 translate-y-0 group-hover:-translate-y-full group-focus-visible:-translate-y-full transition-all duration-300">
+        <div className="max-md:hidden w-full flex gap-6 justify-between bg-slate-200/50 items-baseline font-semibold px-3 py-1 group-hover:opacity-0 group-focus-visible:opacity-0 translate-y-0 group-hover:-translate-y-full group-focus-visible:-translate-y-full transition-all duration-300">
           <p className="text-sm 2xl:text-base uppercase text-balance">
             {product.title}
           </p>
