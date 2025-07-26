@@ -1,267 +1,285 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
 import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { useCart } from "@/components/cart/cart-context"
-import { RazorpayPayment } from "./razorpay-payment"
+import { useState } from "react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { RazorpayPayment } from "./razorpay-payment"
+import type { Cart } from "@/lib/sfcc/types"
 
-interface ShippingAddress {
-  line1: string
-  city: string
-  state: string
-  postal_code: string
-  country: string
+const formSchema = z.object({
+  email: z.string().email(),
+  contactNumber: z.string().min(10, "Please enter a valid phone number"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  country: z.string().min(1, "Country is required"),
+})
+
+type UserData = {
+  email: string
+  firstName: string
+  lastName: string
+} | null
+
+interface CheckoutFormProps {
+  user: UserData
+  cart: Cart
 }
 
-export function CheckoutForm() {
+export function CheckoutForm({ user, cart }: CheckoutFormProps) {
   const router = useRouter()
-  const { cart, isLoading: cartLoading } = useCart()
   const [step, setStep] = useState<"shipping" | "payment">("shipping")
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-    line1: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    country: "India",
+  const [shippingData, setShippingData] = useState<any>(null)
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: user?.email || "",
+      contactNumber: "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      address: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "India",
+    },
   })
-  const [email, setEmail] = useState("")
-  const [contactNumber, setContactNumber] = useState("")
-  const [userName, setUserName] = useState("")
 
-  if (cartLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    )
-  }
-
-  if (!cart || cart.lines.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">Your cart is empty</p>
-        <Button onClick={() => router.push("/shop")} className="mt-4">
-          Continue Shopping
-        </Button>
-      </div>
-    )
-  }
-
-  const handleShippingSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Validate required fields
-    if (!shippingAddress.line1 || !shippingAddress.city || !shippingAddress.state || !shippingAddress.postal_code) {
-      toast.error("Please fill in all required fields")
-      return
-    }
-
-    if (!email || !contactNumber) {
-      toast.error("Please provide email and contact number")
-      return
-    }
-
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setShippingData(values)
     setStep("payment")
   }
 
   const handlePaymentSuccess = (paymentData: any) => {
-    toast.success("Payment successful!")
-    router.push(`/checkout/success?orderId=${paymentData.orderId}&paymentId=${paymentData.paymentId}`)
+    toast.success("Payment successful! Redirecting to confirmation...")
+    router.push(
+      `/checkout/success?orderId=${paymentData.orderId}&orderNumber=${paymentData.orderNumber}&paymentId=${paymentData.paymentId}`,
+    )
   }
 
   const handlePaymentError = (error: any) => {
-    console.error("Payment failed:", error)
     toast.error("Payment failed. Please try again.")
+    console.error("Payment error:", error)
   }
 
-  const totalAmount = cart.cost.totalAmount.amount
+  if (step === "payment" && shippingData) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Button variant="outline" onClick={() => setStep("shipping")} className="mb-4">
+            ← Back to Shipping Information
+          </Button>
+
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <h3 className="font-medium mb-2">Shipping Address</h3>
+            <p className="text-sm text-gray-600">
+              {shippingData.firstName} {shippingData.lastName}
+              <br />
+              {shippingData.address}
+              <br />
+              {shippingData.city}, {shippingData.state} {shippingData.postalCode}
+              <br />
+              {shippingData.country}
+            </p>
+          </div>
+        </div>
+
+        <RazorpayPayment
+          amount={cart?.cost?.totalAmount?.amount || "0"}
+          shippingAddress={{
+            line1: shippingData.address,
+            city: shippingData.city,
+            state: shippingData.state,
+            postal_code: shippingData.postalCode,
+            country: shippingData.country,
+          }}
+          email={shippingData.email}
+          contactNumber={shippingData.contactNumber}
+          userName={`${shippingData.firstName} ${shippingData.lastName}`}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Forms */}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div>
-          {step === "shipping" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleShippingSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="userName">Full Name</Label>
-                    <Input id="userName" value={userName} onChange={(e) => setUserName(e.target.value)} required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="contactNumber">Contact Number</Label>
+          <h2 className="text-lg font-medium text-gray-900">Contact information</h2>
+          <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Email address</FormLabel>
+                  <FormControl>
                     <Input
-                      id="contactNumber"
-                      type="tel"
-                      value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      required
+                      placeholder="your.email@example.com"
+                      {...field}
+                      readOnly={!!user?.email}
+                      className={user?.email ? "bg-gray-100 cursor-not-allowed" : ""}
                     />
-                  </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                  <div>
-                    <Label htmlFor="line1">Address Line 1</Label>
-                    <Input
-                      id="line1"
-                      value={shippingAddress.line1}
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, line1: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={shippingAddress.city}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        value={shippingAddress.state}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="postal_code">Postal Code</Label>
-                      <Input
-                        id="postal_code"
-                        value={shippingAddress.postal_code}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, postal_code: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        value={shippingAddress.country}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full">
-                    Continue to Payment
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === "payment" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="font-medium mb-2">Shipping Address</h3>
-                    <p className="text-sm text-gray-600">
-                      {shippingAddress.line1}
-                      <br />
-                      {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postal_code}
-                      <br />
-                      {shippingAddress.country}
-                    </p>
-                    <Button variant="outline" size="sm" onClick={() => setStep("shipping")} className="mt-2">
-                      Edit Address
-                    </Button>
-                  </div>
-
-                  <RazorpayPayment
-                    amount={Number(totalAmount)}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                    shippingAddress={shippingAddress}
-                    email={email}
-                    contactNumber={contactNumber}
-                    userName={userName}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            <FormField
+              control={form.control}
+              name="contactNumber"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Contact number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="Enter your contact number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
-        {/* Right Column - Order Summary */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cart.lines.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-4">
-                    <img
-                      src={item.merchandise.product.featuredImage || "/placeholder.svg"}
-                      alt={item.merchandise.product.title}
-                      className="w-16 h-16 object-cover rounded"
+        <div className="mt-10 border-t border-gray-200 pt-10">
+          <h2 className="text-lg font-medium text-gray-900">Shipping information</h2>
+          <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      readOnly={!!user?.firstName}
+                      className={user?.firstName ? "bg-gray-100 cursor-not-allowed" : ""}
                     />
-                    <div className="flex-1">
-                      <h3 className="font-medium">{item.merchandise.product.title}</h3>
-                      <p className="text-sm text-gray-500">
-                        {item.merchandise.title} × {item.quantity}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">₹{Number(Number(item.cost.totalAmount.amount) * item.quantity).toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <Separator />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      readOnly={!!user?.lastName}
+                      className={user?.lastName ? "bg-gray-100 cursor-not-allowed" : ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{Number(cart.cost.subtotalAmount.amount).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>₹{Number(cart.cost.totalTaxAmount.amount).toFixed(2)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>₹{Number(totalAmount).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="sm:col-span-2">
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="postalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postal code</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-10 border-t border-gray-200 pt-10">
+          <h2 className="text-lg font-medium text-gray-900">Payment</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            You will be redirected to Razorpay for secure payment processing.
+          </p>
+        </div>
+
+        <div className="mt-10 border-t border-gray-200 pt-6">
+          <Button type="submit" className="w-full">
+            Continue to Payment
+          </Button>
+        </div>
+      </form>
+    </Form>
   )
 }

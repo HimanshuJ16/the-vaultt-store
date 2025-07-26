@@ -1,23 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createRazorpayOrder } from "@/lib/razorpay"
+import { createRazorpayOrder, RAZORPAY_KEY_ID } from "@/lib/razorpay"
+import { getCart } from "@/lib/sfcc"
+import { cookies } from "next/headers"
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json()
-    const { amount } = body
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
+    if (!RAZORPAY_KEY_ID) {
+      return NextResponse.json({ error: "Razorpay is not configured" }, { status: 500 })
     }
 
+    const { shippingAddress, email, contactNumber, userName } = await request.json()
+
+    // Get cart from cookies
+    const cartId = (await cookies()).get("cartId")?.value
+    if (!cartId) {
+      return NextResponse.json({ error: "Cart not found" }, { status: 400 })
+    }
+
+    const cart = await getCart()
+    if (!cart || cart.lines.length === 0) {
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
+    }
+
+    const amount = Number.parseFloat(cart.cost.totalAmount.amount)
+
     // Create Razorpay order
-    const order = await createRazorpayOrder(amount)
+    const razorpayOrder = await createRazorpayOrder(amount)
 
     return NextResponse.json({
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID,
+      orderId: razorpayOrder.id,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency,
+      key: RAZORPAY_KEY_ID,
     })
   } catch (error) {
     console.error("Error creating Razorpay order:", error)

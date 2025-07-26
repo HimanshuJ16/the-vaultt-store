@@ -111,6 +111,8 @@ export type SelectedOptions = {
 }[];
 
 export type Address = {
+  postal_code: any;
+  line1: any;
   firstName?: string;
   lastName?: string;
   address1?: string;

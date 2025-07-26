@@ -62,7 +62,13 @@ export async function POST(req: NextRequest) {
       id: orderWithItems.id,
       totalAmount: orderWithItems.totalAmount,
       createdAt: orderWithItems.createdAt,
-      shippingAddress: JSON.parse(orderWithItems.shippingAddress),
+      shippingAddress: {
+          line1: shippingAddress.line1,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          postal_code: shippingAddress.zip,
+          country: shippingAddress.country,
+      },
       paymentId: razorpay_payment_id,
       items: order.lines.map(item => {
           const colorOption = item.merchandise.selectedOptions.find(opt => opt.name.toLowerCase() === 'color');

@@ -622,10 +622,11 @@ export async function placeOrder({
   }
 
   const formattedAddress = [
-    shippingAddress.address1,
+    shippingAddress.line1,
     shippingAddress.city,
     shippingAddress.state,
     shippingAddress.country,
+    shippingAddress.postal_code,
   ]
     .filter(Boolean)
     .join(", ")

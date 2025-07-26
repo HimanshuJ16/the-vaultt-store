@@ -27,7 +27,7 @@ export default async function CheckoutPage() {
         </h1>
         <div className="mt-12 lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-12 xl:gap-x-16">
           <section className="lg:col-span-7">
-            <CheckoutForm user={userData} />
+            <CheckoutForm user={userData} cart={cart} />
           </section>
           <OrderSummary cart={cart} />
         </div>

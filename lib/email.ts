@@ -1,44 +1,13 @@
-import nodemailer from "nodemailer"
-import { baseUrl } from "./utils"
+import { transporter } from './nodemailer';
+import { Address } from './sfcc/types';
+import { baseUrl } from './utils';
 
-interface OrderDetails {
-  id: string
-  totalAmount: number
-  createdAt: Date
-  shippingAddress: {
-    line1: string
-    city: string
-    state: string
-    postal_code: string
-    country: string
-  }
-  paymentId?: string
-  items: Array<{
-    quantity: number
-    price: number
-    product: {
-      title: string
-      image: string
-    }
-    variant: {
-      color: string
-      size: string
-    }
-  }>
-}
+// Define the logo URL (use the full URL or a relative path like '/logo1.png')
+const logoUrl = 'https://the-vaultt-store.vercel.app/logo1.png';
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.NODE_MAILER_EMAIL,
-    pass: process.env.NODE_MAILER_GMAIL_APP_PASSWORD,
-  },
-})
-
-// Function to send a welcome email with an improved design
 export async function sendWelcomeEmail(userEmail: string, userName: string) {
-  const shopUrl = baseUrl + "/shop"
-  const year = new Date().getFullYear()
+  const shopUrl = baseUrl + '/shop';
+  const year = new Date().getFullYear();
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -164,7 +133,7 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
     <body>
       <div class="container">
         <div class="header">
-          <img src="cid:logo" alt="The Vaultt Store Logo" />
+          <img src="${logoUrl}" alt="The Vaultt Store Logo" />
         </div>
         <div class="content">
           <h1>Welcome, ${userName}!</h1>
@@ -187,136 +156,196 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
               <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" />
             </a>
           </div>
-          <p>&copy; ${year} The Vaultt Store. All rights reserved.</p>
+          <p>© ${year} The Vaultt Store. All rights reserved.</p>
         </div>
       </div>
     </body>
     </html>
-  `
+  `;
 
   const mailOptions = {
     from: process.env.NODE_MAILER_EMAIL,
     to: userEmail,
-    subject: "Welcome to The Vaultt Store!",
+    subject: 'Welcome to The Vaultt Store!',
     html: htmlContent,
-    attachments: [
-      {
-        filename: "logo1.png",
-        path: "./public/logo1.png",
-        cid: "logo",
-      },
-    ],
-  }
+    // No attachments needed since the image is embedded via URL
+  };
 
   try {
-    await transporter.sendMail(mailOptions)
-    console.log("Welcome email sent to:", userEmail)
+    await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent to:', userEmail);
   } catch (error) {
-    console.error("Error sending welcome email:", error)
-    throw new Error("Failed to send welcome email.")
+    console.error('Error sending welcome email:', error);
+    throw new Error('Failed to send welcome email.');
   }
 }
 
-// Function to send an order confirmation email with payment ID
-export async function sendOrderConfirmationEmail(email: string, customerName: string, orderDetails: OrderDetails) {
-  const itemsHtml = orderDetails.items
-    .map(
-      (item) => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <img src="${item.product.image}" alt="${item.product.title}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
-      </td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">
-        <strong>${item.product.title}</strong><br>
-        <small>Color: ${item.variant.color} | Size: ${item.variant.size}</small>
-      </td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">₹${item.price.toFixed(2)}</td>
+// Interface for the order details
+interface OrderDetails {
+  id: string;
+  orderNumber: string;
+  totalAmount: number;
+  createdAt: Date;
+  shippingAddress: Address; // Use `any` or a more specific type for your address object
+  items: {
+    quantity: number;
+    price: number;
+    product: {
+      title: string;
+      image: string;
+    };
+    variant: {
+      color: string;
+      size: string;
+    };
+  }[];
+}
+
+// Function to send an order confirmation email
+export async function sendOrderConfirmationEmail(userEmail: string, userName: string, order: OrderDetails) {
+  const itemsHtml = order.items.map(item => `
+    <tr class="item">
+        <td><img src="${item.product.image}" alt="${item.product.title}" width="60" /></td>
+        <td>
+            ${item.product.title}<br>
+            <small>Size: ${item.variant.size}</small>
+        </td>
+        <td>${item.quantity}</td>
+        <td>₹${item.price.toFixed(2)}</td>
     </tr>
-  `,
-    )
-    .join("")
+  `).join('');
+
+  // A simple way to format the address
+  const formattedAddress = `${order.shippingAddress.line1}, ${order.shippingAddress.city}, ${order.shippingAddress.state}, ${order.shippingAddress.country} - ${order.shippingAddress.postal_code}`;
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
-      <meta charset="utf-8">
-      <title>Order Confirmation</title>
+        <meta charset="UTF-8">
+        <title>Your Order Confirmation</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+            body { font-family: 'Poppins', sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333; }
+            .container { max-width: 650px; margin: 20px auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); overflow: hidden; }
+            .header { background-color: #F1F1F1; padding: 20px; text-align: center; }
+            .header img { max-width: 160px; }
+            .content { padding: 30px 40px; }
+            .content h1 { font-size: 24px; color: #000; margin-bottom: 10px; }
+            .content p { font-size: 16px; line-height: 1.6; }
+            .order-summary { margin: 30px 0; }
+            .summary-table { width: 100%; border-collapse: collapse; }
+            .summary-table th, .summary-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+            .summary-table th { color: #888; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+            .item td { vertical-align: middle; }
+            .item img { border-radius: 4px; margin-right: 15px; }
+            .total-row td { font-size: 18px; font-weight: 600; border-top: 2px solid #000; border-bottom: none; text-align: right; }
+            .shipping-details { background-color: #fafafa; padding: 20px; border-radius: 5px; margin-top: 20px; }
+            .shipping-details h2 { font-size: 18px; margin-bottom: 10px; }
+            .button-container { text-align: center; margin: 30px 0; }
+            .button { background-color: #000; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; }
+            .footer { background-color: #f2f2f2; padding: 25px 20px; text-align: center; font-size: 12px; color: #888; }
+            .socials {
+              margin-bottom: 15px;
+            }
+            .socials p {
+              margin-bottom: 10px;
+              font-size: 14px;
+              color: #444;
+              font-weight: 500;
+            }
+            .socials a {
+              margin: 0 8px;
+              display: inline-block;
+            }
+            .socials img {
+              width: 28px;
+              height: 28px;
+              opacity: 0.85;
+              transition: opacity 0.2s ease;
+            }
+            .socials img:hover {
+              opacity: 1;
+            }
+        </style>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h1 style="color: #28a745; margin: 0;">Order Confirmed!</h1>
-        <p style="margin: 10px 0 0 0;">Thank you for your purchase, ${customerName}!</p>
-      </div>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="${logoUrl}" alt="The Vaultt Store Logo">
+            </div>
+            <div class="content">
+                <h1>Thanks for your order, ${userName}!</h1>
+                <p>We've received it and we're getting it ready for shipment. You'll receive another email once your order has shipped.</p>
+                
+                <div class="order-summary">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2">Order Summary</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                            <tr class="total-row">
+                                <td colspan="3">Total</td>
+                                <td>₹${order.totalAmount.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-      <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">Order Details</h2>
-        <p><strong>Order ID:</strong> ${orderDetails.id}</p>
-        <p><strong>Order Date:</strong> ${orderDetails.createdAt.toLocaleDateString()}</p>
-        ${orderDetails.paymentId ? `<p><strong>Payment ID:</strong> ${orderDetails.paymentId}</p>` : ""}
-        <p><strong>Payment Status:</strong> <span style="color: #28a745; font-weight: bold;">PAID</span></p>
-      </div>
-
-      <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">Items Ordered</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background: #f8f9fa;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Image</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Product</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Qty</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-        <div style="text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
-          <h3 style="margin: 0;">Total: ₹${orderDetails.totalAmount.toFixed(2)}</h3>
+                <div class="shipping-details">
+                    <h2>Shipping To</h2>
+                    <p>${formattedAddress}</p>
+                </div>
+            </div>
+            <div class="footer">
+                <div class="socials">
+                  <p>Follow us for exclusive drops & updates:</p>
+                  <a href="https://www.instagram.com/thevaulttstore">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
+                  </a>
+                  <a href="https://api.whatsapp.com/send?phone=918860515565&text=Hi%20TheVaulttStore%2C%20want%20to%20order%20a%20product.">
+                    <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" />
+                  </a>
+                </div>
+                <p>© ${new Date().getFullYear()} The Vaultt Store. All rights reserved.</p>
+            </div>
         </div>
-      </div>
-
-      <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">Shipping Address</h2>
-        <p style="margin: 0;">
-          ${orderDetails.shippingAddress.line1}<br>
-          ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state} ${orderDetails.shippingAddress.postal_code}<br>
-          ${orderDetails.shippingAddress.country}
-        </p>
-      </div>
-
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
-        <p style="margin: 0;">Thank you for shopping with us!</p>
-        <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">
-          If you have any questions, please contact our support team.
-        </p>
-      </div>
     </body>
     </html>
-  `
-
+  `;
+  
   const mailOptions = {
     from: process.env.NODE_MAILER_EMAIL,
-    to: email,
-    subject: `Order Confirmation - ${orderDetails.id}`,
+    to: userEmail,
+    subject: `Your The Vaultt Store Order Confirmation [#${order.orderNumber}]`,
     html: htmlContent,
-  }
+    // No attachments needed since the image is embedded via URL
+  };
 
-  await transporter.sendMail(mailOptions)
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Order confirmation email sent to:', userEmail);
+  } catch (error) {
+    console.error('Error sending order confirmation email:', error);
+    throw new Error('Failed to send order confirmation email.');
+  }
 }
 
 export async function sendOrderShippedEmail(
-  userEmail: string,
-  userName: string,
-  order: string,
-  trackingId: string,
-  parcelImageUrl: string,
+    userEmail: string,
+    userName: string,
+    order: string,
+    trackingId: string,
+    parcelImageUrl: string
 ) {
-  const year = new Date().getFullYear()
+    const year = new Date().getFullYear();
 
-  const htmlContent = `
+    const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -334,7 +363,7 @@ export async function sendOrderShippedEmail(
         <div style="max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
             
             <div style="padding: 30px; text-align: center; background-color: #F0F0F0;">
-                <img src="cid:logo" alt="The Vaultt Store Logo" style="max-width: 160px;" />
+                <img src="${logoUrl}" alt="The Vaultt Store Logo" style="max-width: 160px;" />
             </div>
             
             <div style="padding: 40px 30px; text-align: center;">
@@ -366,33 +395,27 @@ export async function sendOrderShippedEmail(
                         <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp" style="width: 28px; height: 28px; opacity: 0.85;" />
                     </a>
                 </div>
-                <p>&copy; ${year} The Vaultt Store. All rights reserved.</p>
+                <p>© ${year} The Vaultt Store. All rights reserved.</p>
             </div>
             
         </div>
     </body>
     </html>
-    `
+    `;
 
-  const mailOptions = {
-    from: process.env.NODE_MAILER_EMAIL,
-    to: userEmail,
-    subject: `Your Order [#${order}] has been shipped!`,
-    html: htmlContent,
-    attachments: [
-      {
-        filename: "logo1.png",
-        path: "./public/logo1.png",
-        cid: "logo",
-      },
-    ],
-  }
+    const mailOptions = {
+        from: process.env.NODE_MAILER_EMAIL,
+        to: userEmail,
+        subject: `Your Order [#${order}] has been shipped!`,
+        html: htmlContent,
+        // No attachments needed since the image is embedded via URL
+    };
 
-  try {
-    await transporter.sendMail(mailOptions)
-    console.log("Order shipped email sent to:", userEmail)
-  } catch (error) {
-    console.error("Error sending order shipped email:", error)
-    throw new Error("Failed to send order shipped email.")
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Order shipped email sent to:', userEmail);
+    } catch (error) {
+        console.error('Error sending order shipped email:', error);
+        throw new Error('Failed to send order shipped email.');
+    }
 }

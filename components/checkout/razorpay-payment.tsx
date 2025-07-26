@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
 
 declare global {
   interface Window {
@@ -11,23 +12,29 @@ declare global {
 }
 
 interface RazorpayPaymentProps {
-  amount: number
-  onSuccess: (paymentData: any) => void
-  onError: (error: any) => void
-  shippingAddress: any
+  amount: string
+  shippingAddress: {
+    line1: string
+    city: string
+    state: string
+    postal_code: string
+    country: string
+  }
   email: string
   contactNumber: string
-  userName?: string
+  userName: string
+  onSuccess: (data: any) => void
+  onError: (error: any) => void
 }
 
 export function RazorpayPayment({
   amount,
-  onSuccess,
-  onError,
   shippingAddress,
   email,
   contactNumber,
   userName,
+  onSuccess,
+  onError,
 }: RazorpayPaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
 
@@ -48,32 +55,47 @@ export function RazorpayPayment({
       // Load Razorpay script
       const scriptLoaded = await loadRazorpayScript()
       if (!scriptLoaded) {
-        throw new Error("Failed to load Razorpay script")
+        toast.error("Failed to load payment gateway")
+        setIsLoading(false)
+        return
       }
 
-      // Create order on server
+      // Create Razorpay order
       const orderResponse = await fetch("/api/create-razorpay-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({
+          shippingAddress,
+          email,
+          contactNumber,
+          userName,
+        }),
       })
 
-      if (!orderResponse.ok) {
-        throw new Error("Failed to create order")
-      }
-
       const orderData = await orderResponse.json()
+
+      if (!orderResponse.ok) {
+        throw new Error(orderData.error || "Failed to create order")
+      }
 
       // Configure Razorpay options
       const options = {
         key: orderData.key,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "The Vaultt Store",
-        description: "Purchase from The Vaultt Store",
+        name: "Your Store Name",
+        description: "Order Payment",
         order_id: orderData.orderId,
+        prefill: {
+          name: userName,
+          email: email,
+          contact: contactNumber,
+        },
+        theme: {
+          color: "#000000",
+        },
         handler: async (response: any) => {
           try {
             // Verify payment on server
@@ -93,28 +115,26 @@ export function RazorpayPayment({
               }),
             })
 
-            if (!verifyResponse.ok) {
-              throw new Error("Payment verification failed")
-            }
-
             const verifyData = await verifyResponse.json()
-            onSuccess(verifyData)
+
+            if (verifyResponse.ok && verifyData.success) {
+              onSuccess({
+                orderId: verifyData.orderId,
+                orderNumber: verifyData.orderNumber,
+                paymentId: verifyData.paymentId,
+              })
+            } else {
+              throw new Error(verifyData.error || "Payment verification failed")
+            }
           } catch (error) {
             console.error("Payment verification error:", error)
             onError(error)
           }
         },
-        prefill: {
-          name: userName || "",
-          email: email,
-          contact: contactNumber,
-        },
-        theme: {
-          color: "#000000",
-        },
         modal: {
           ondismiss: () => {
             setIsLoading(false)
+            toast.error("Payment cancelled")
           },
         },
       }
@@ -124,6 +144,7 @@ export function RazorpayPayment({
       razorpay.open()
     } catch (error) {
       console.error("Payment error:", error)
+      toast.error("Failed to initiate payment")
       onError(error)
     } finally {
       setIsLoading(false)
@@ -131,15 +152,28 @@ export function RazorpayPayment({
   }
 
   return (
-    <Button onClick={handlePayment} disabled={isLoading} className="w-full" size="lg">
-      {isLoading ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Processing...
-        </>
-      ) : (
-        `Pay ₹${amount.toFixed(2)}`
-      )}
-    </Button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Complete Payment</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-lg font-semibold">
+            <span>Total Amount:</span>
+            <span>₹{Number.parseFloat(amount).toFixed(2)}</span>
+          </div>
+
+          <div className="text-sm text-gray-600">
+            <p>• Secure payment powered by Razorpay</p>
+            <p>• Supports UPI, Cards, Net Banking, and Wallets</p>
+            <p>• Your payment information is encrypted and secure</p>
+          </div>
+
+          <Button onClick={handlePayment} disabled={isLoading} className="w-full" size="lg">
+            {isLoading ? "Processing..." : `Pay ₹${Number.parseFloat(amount).toFixed(2)}`}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
