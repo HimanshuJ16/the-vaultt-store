@@ -1,14 +1,116 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Mail, Phone, Instagram, Clock, AlertCircle } from "lucide-react"
+import { Mail, Phone, Instagram, Clock, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
+
+interface FormData {
+  name: string
+  email: string
+  phone: string
+  orderNumber: string
+  subject: string
+  message: string
+}
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    email: "",
+    phone: "",
+    orderNumber: "",
+    subject: "",
+    message: "",
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+  const { toast } = useToast()
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields marked with *",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setIsSubmitted(true)
+        toast({
+          title: "Message Sent Successfully!",
+          description: "We'll get back to you within 24 hours.",
+        })
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          orderNumber: "",
+          subject: "",
+          message: "",
+        })
+      } else {
+        throw new Error(result.error || "Failed to send message")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send message. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <div className="container mx-auto mt-12 px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-4">Contact Us</h1>
         <p className="text-lg text-muted-foreground">
@@ -117,42 +219,95 @@ export default function ContactPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4">
+          {isSubmitted && (
+            <Alert className="mb-6 border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Thank you for your message! We've sent a confirmation email and will get back to you within 24 hours.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Name *</Label>
-                <Input id="name" placeholder="Your full name" required />
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Your full name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="email">Email *</Label>
-                <Input id="email" type="email" placeholder="your.email@example.com" required />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" placeholder="+91 XXXXX XXXXX" />
+                <Input
+                  id="phone"
+                  name="phone"
+                  placeholder="+91 XXXXX XXXXX"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                />
               </div>
               <div>
-                <Label htmlFor="order">Order Number</Label>
-                <Input id="order" placeholder="Order #12345 (if applicable)" />
+                <Label htmlFor="orderNumber">Order Number</Label>
+                <Input
+                  id="orderNumber"
+                  name="orderNumber"
+                  placeholder="#ORDER-XXXXXXXXXXXXX (if applicable)"
+                  value={formData.orderNumber}
+                  onChange={handleInputChange}
+                />
               </div>
             </div>
             <div>
               <Label htmlFor="subject">Subject *</Label>
-              <Input id="subject" placeholder="Brief description of your inquiry" required />
+              <Input
+                id="subject"
+                name="subject"
+                placeholder="Brief description of your inquiry"
+                value={formData.subject}
+                onChange={handleInputChange}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="message">Message *</Label>
               <Textarea
                 id="message"
+                name="message"
                 placeholder="Please provide detailed information about your inquiry. For replacement requests, mention that you have the parcel opening video ready."
                 rows={6}
+                value={formData.message}
+                onChange={handleInputChange}
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Send Message
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending Message...
+                </>
+              ) : (
+                "Send Message"
+              )}
             </Button>
           </form>
         </CardContent>
