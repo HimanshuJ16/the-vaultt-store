@@ -71,10 +71,11 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> }
 ) {
+  const { handle } = await params;
   try {
-    await deleteProduct(params.handle);
+    await deleteProduct(handle);
     return NextResponse.json({ message: 'Product deleted successfully' }, { status: 200 });
   } catch (error) {
     console.error('Failed to delete product:', error);

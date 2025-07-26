@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/app/admin/components/data-table-column-header"
 import { Product } from "@/lib/sfcc/types" // Assuming your types are here
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { startTransition } from "react"
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -81,6 +84,30 @@ export const columns: ColumnDef<Product>[] = [
     id: "actions",
     cell: ({ row }) => {
       const product = row.original
+      const router = useRouter();
+      const handleDelete = (handle: string) => {
+        startTransition(async () => {
+          try {
+            const response = await fetch(`/api/admin/products/${handle}`, {
+              method: "DELETE",
+            });
+          
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(
+                errorData.error || "Failed to delete the product."
+              );
+            }
+          
+            toast.success("Product deleted successfully!");
+            router.refresh();
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : "An error occurred."
+            );
+          }
+        });
+      };
 
       return (
         <DropdownMenu>
@@ -101,7 +128,10 @@ export const columns: ColumnDef<Product>[] = [
             <DropdownMenuItem asChild>
                 <Link href={`/admin/products/${product.handle}`}>Edit product</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Delete product</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleDelete(product.handle)}>
+                Delete product
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
