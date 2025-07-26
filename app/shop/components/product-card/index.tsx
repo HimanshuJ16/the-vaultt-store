@@ -38,14 +38,14 @@ export const ProductCard = ({ product }: { product: Product }) => {
             <p className="text-lg font-semibold place-self-end">
               {displayPrice}
             </p>
-            <Suspense fallback={null}>
+            {/* <Suspense fallback={null}>
               <div className="self-center">
                 <VariantSelector product={product} />
               </div>
             </Suspense>
             <Suspense fallback={null}>
               <AddToCart className="col-start-2" size="sm" product={product} />
-            </Suspense>
+            </Suspense> */}
           </div>
         </div>
       </div>

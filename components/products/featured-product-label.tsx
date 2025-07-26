@@ -47,13 +47,13 @@ export function FeaturedProductLabel({
         <p className="col-span-1 md:self-end text-2xl font-semibold">
           ₹{displayPrice}
         </p>
-        <Suspense fallback={null}>
+        {/* <Suspense fallback={null}>
           <AddToCart
             className="flex justify-between gap-20 pr-2"
             size="lg"
             product={product}
           />
-        </Suspense>
+        </Suspense> */}
       </div>
     );
   }
@@ -76,14 +76,14 @@ export function FeaturedProductLabel({
           ₹{displayPrice}
         </p>
       </div>
-      <Suspense fallback={null}>
+      {/* <Suspense fallback={null}>
         <AddToCart
           product={product}
           iconOnly={true}
           variant="default"
           size="icon-lg"
         />
-      </Suspense>
+      </Suspense> */}
     </div>
   );
 }
