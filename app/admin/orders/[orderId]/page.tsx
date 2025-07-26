@@ -16,9 +16,10 @@ import Image from "next/image";
 export default async function OrderDetailPage({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
-  const order = await getOrderDetails(params.orderId);
+  const { orderId } = await params;
+  const order = await getOrderDetails(orderId);
 
   if (!order) {
     return notFound();
@@ -73,6 +74,15 @@ export default async function OrderDetailPage({
           <CardContent className="space-y-2">
             <p><strong>Address:</strong> {order.shippingAddress}</p>
             <p><strong>Method:</strong> {order.shippingMethod}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p><strong>Razorpay Payment ID :</strong> {order.paymentId}</p>
+            <p><strong>Razorpay Order ID:</strong> {order.razorpayOrderId}</p>
           </CardContent>
         </Card>
       </div>
