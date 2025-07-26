@@ -1,15 +1,12 @@
 import Razorpay from "razorpay"
+import crypto from "crypto"
 
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  throw new Error("Razorpay credentials are not configured")
-}
-
-export const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 
-export const createRazorpayOrder = async (amount: number, currency = "INR") => {
+export async function createRazorpayOrder(amount: number, currency = "INR") {
   try {
     const options = {
       amount: amount * 100, // Razorpay expects amount in paise
@@ -21,21 +18,27 @@ export const createRazorpayOrder = async (amount: number, currency = "INR") => {
     return order
   } catch (error) {
     console.error("Error creating Razorpay order:", error)
-    throw error
+    throw new Error("Failed to create payment order")
   }
 }
 
-export const verifyRazorpayPayment = (
+export function verifyRazorpayPayment(
   razorpayOrderId: string,
   razorpayPaymentId: string,
   razorpaySignature: string,
-) => {
-  const crypto = require("crypto")
-  const body = razorpayOrderId + "|" + razorpayPaymentId
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-    .update(body.toString())
-    .digest("hex")
+): boolean {
+  try {
+    const body = razorpayOrderId + "|" + razorpayPaymentId
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .update(body.toString())
+      .digest("hex")
 
-  return expectedSignature === razorpaySignature
+    return expectedSignature === razorpaySignature
+  } catch (error) {
+    console.error("Error verifying payment:", error)
+    return false
+  }
 }
+
+export { razorpay }

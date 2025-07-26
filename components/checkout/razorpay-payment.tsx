@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
 
 declare global {
   interface Window {
@@ -12,71 +11,69 @@ declare global {
 }
 
 interface RazorpayPaymentProps {
+  amount: number
+  onSuccess: (paymentData: any) => void
+  onError: (error: any) => void
   shippingAddress: any
   email: string
-  contactNumber?: string
-  onSuccess: (orderId: string, orderNumber: string) => void
-  onError: (error: string) => void
+  contactNumber: string
+  userName?: string
 }
 
-export function RazorpayPayment({ shippingAddress, email, contactNumber, onSuccess, onError }: RazorpayPaymentProps) {
+export function RazorpayPayment({
+  amount,
+  onSuccess,
+  onError,
+  shippingAddress,
+  email,
+  contactNumber,
+  userName,
+}: RazorpayPaymentProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false)
 
-  useEffect(() => {
-    // Load Razorpay script
-    const script = document.createElement("script")
-    script.src = "https://checkout.razorpay.com/v1/checkout.js"
-    script.onload = () => setIsScriptLoaded(true)
-    script.onerror = () => {
-      console.error("Failed to load Razorpay script")
-      onError("Failed to load payment gateway")
-    }
-    document.body.appendChild(script)
-
-    return () => {
-      document.body.removeChild(script)
-    }
-  }, [onError])
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script")
+      script.src = "https://checkout.razorpay.com/v1/checkout.js"
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
 
   const handlePayment = async () => {
-    if (!isScriptLoaded) {
-      toast.error("Payment gateway is still loading. Please try again.")
-      return
-    }
-
     setIsLoading(true)
 
     try {
-      // Create Razorpay order
-      const response = await fetch("/api/create-razorpay-order", {
+      // Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript()
+      if (!scriptLoaded) {
+        throw new Error("Failed to load Razorpay script")
+      }
+
+      // Create order on server
+      const orderResponse = await fetch("/api/create-razorpay-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ amount }),
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to create payment order")
+      if (!orderResponse.ok) {
+        throw new Error("Failed to create order")
       }
 
-      const { orderId, amount, currency, key } = await response.json()
+      const orderData = await orderResponse.json()
 
+      // Configure Razorpay options
       const options = {
-        key,
-        amount,
-        currency,
-        name: "Your Store Name",
-        description: "Purchase from Your Store",
-        order_id: orderId,
-        prefill: {
-          name: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-          email,
-          contact: contactNumber || shippingAddress.phone,
-        },
-        theme: {
-          color: "#000000",
-        },
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "The Vaultt Store",
+        description: "Purchase from The Vaultt Store",
+        order_id: orderData.orderId,
         handler: async (response: any) => {
           try {
             // Verify payment on server
@@ -92,6 +89,7 @@ export function RazorpayPayment({ shippingAddress, email, contactNumber, onSucce
                 shippingAddress,
                 email,
                 contactNumber,
+                userName,
               }),
             })
 
@@ -99,17 +97,20 @@ export function RazorpayPayment({ shippingAddress, email, contactNumber, onSucce
               throw new Error("Payment verification failed")
             }
 
-            const result = await verifyResponse.json()
-
-            if (result.success) {
-              onSuccess(result.orderId, result.orderNumber)
-            } else {
-              throw new Error("Payment verification failed")
-            }
+            const verifyData = await verifyResponse.json()
+            onSuccess(verifyData)
           } catch (error) {
             console.error("Payment verification error:", error)
-            onError("Payment verification failed. Please contact support.")
+            onError(error)
           }
+        },
+        prefill: {
+          name: userName || "",
+          email: email,
+          contact: contactNumber,
+        },
+        theme: {
+          color: "#000000",
         },
         modal: {
           ondismiss: () => {
@@ -118,26 +119,26 @@ export function RazorpayPayment({ shippingAddress, email, contactNumber, onSucce
         },
       }
 
+      // Open Razorpay checkout
       const razorpay = new window.Razorpay(options)
       razorpay.open()
     } catch (error) {
       console.error("Payment error:", error)
-      onError("Failed to initiate payment. Please try again.")
+      onError(error)
+    } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Button onClick={handlePayment} disabled={isLoading || !isScriptLoaded} className="w-full" size="lg">
+    <Button onClick={handlePayment} disabled={isLoading} className="w-full" size="lg">
       {isLoading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Processing Payment...
+          Processing...
         </>
-      ) : !isScriptLoaded ? (
-        "Loading Payment Gateway..."
       ) : (
-        "Pay Now"
+        `Pay ₹${amount.toFixed(2)}`
       )}
     </Button>
   )

@@ -1,12 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyRazorpayPayment } from "@/lib/razorpay"
 import { placeOrder, clearCartAfterPayment, getUserId } from "@/lib/sfcc"
+import { sendOrderConfirmationEmail } from "@/lib/email"
 import prisma from "@/lib/prisma"
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, shippingAddress, email, contactNumber } = body
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      shippingAddress,
+      email,
+      contactNumber,
+      userName,
+    } = body
 
     // Verify the payment signature
     const isValidPayment = verifyRazorpayPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature)
@@ -32,6 +41,55 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Get order with items for email
+    const orderWithItems = await prisma.order.findUnique({
+      where: { id: updatedOrder.id },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    })
+
+    if (!orderWithItems) {
+      throw new Error("Order not found after update")
+    }
+
+    // Transform the order data to match the OrderDetails interface
+    const orderForEmail = {
+      id: orderWithItems.id,
+      totalAmount: orderWithItems.totalAmount,
+      createdAt: orderWithItems.createdAt,
+      shippingAddress: JSON.parse(orderWithItems.shippingAddress),
+      paymentId: razorpay_payment_id,
+      items: order.lines.map(item => {
+          const colorOption = item.merchandise.selectedOptions.find(opt => opt.name.toLowerCase() === 'color');
+          const sizeOption = item.merchandise.selectedOptions.find(opt => opt.name.toLowerCase() === 'size');
+          return {
+            quantity: item.quantity,
+            price: parseFloat(item.cost.totalAmount.amount) / item.quantity,
+            product: {
+              title: item.merchandise.product.title,
+              image: item.merchandise.product.featuredImage,
+            },
+            variant: {
+              color: colorOption ? colorOption.value : 'N/A',
+              size: sizeOption ? sizeOption.value : 'N/A',
+            },
+          };
+        }),
+    }
+
+    // Send order confirmation email with payment ID
+    try {
+      await sendOrderConfirmationEmail(email, userName || "Customer", orderForEmail)
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError)
+      // Don't fail the entire request if email fails
+    }
+
     // Clear the cart after successful payment
     const userId = await getUserId()
     if (userId) {
@@ -42,6 +100,7 @@ export async function POST(req: NextRequest) {
       success: true,
       orderId: updatedOrder.id,
       orderNumber: updatedOrder.orderNumber,
+      paymentId: razorpay_payment_id,
     })
   } catch (error) {
     console.error("Error verifying payment:", error)

@@ -1,26 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createRazorpayOrder } from "@/lib/razorpay"
-import { getCart } from "@/lib/sfcc"
 
 export async function POST(req: NextRequest) {
   try {
-    const cart = await getCart()
+    const body = await req.json()
+    const { amount } = body
 
-    if (!cart || cart.lines.length === 0) {
-      return NextResponse.json({ error: "Cart is empty" }, { status: 400 })
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 })
     }
 
-    const amount = Number.parseFloat(cart.cost.totalAmount.amount)
-    const razorpayOrder = await createRazorpayOrder(amount)
+    // Create Razorpay order
+    const order = await createRazorpayOrder(amount)
 
     return NextResponse.json({
-      orderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
       key: process.env.RAZORPAY_KEY_ID,
     })
   } catch (error) {
     console.error("Error creating Razorpay order:", error)
-    return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to create order" }, { status: 500 })
   }
 }
