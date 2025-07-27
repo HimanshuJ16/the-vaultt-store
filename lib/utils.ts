@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { ReadonlyURLSearchParams } from "next/navigation";
 import { twMerge } from "tailwind-merge";
 import { COLOR_MAP } from "./constants";
+import z from "zod";
 
 export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
   ? `https://${process.env.NEXT_PUBLIC_BASE_URL}`
@@ -17,10 +18,28 @@ export const createUrl = (
   return `${pathname}${queryString}`;
 };
 
-export const ensureStartsWith = (stringToCheck: string, startsWith: string) =>
-  stringToCheck.startsWith(startsWith)
-    ? stringToCheck
-    : `${startsWith}${stringToCheck}`;
+type PrefixedShape<T extends z.ZodObject<any>, P extends string> = {
+  [K in keyof T["shape"] as K extends string
+    ? `${P}.${K}`
+    : never]: T["shape"][K];
+};
+
+// Creates a new Zod schema with all keys prefixed with the given string.
+export const prefixSchema = <T extends z.ZodObject<any>, P extends string>(
+  schema: T,
+  prefix: P
+): z.ZodObject<PrefixedShape<T, P>> => {
+  if (!prefix) return schema as z.ZodObject<PrefixedShape<T, P>>;
+
+  const shape = schema.shape;
+  const newShape = {} as PrefixedShape<T, P>;
+
+  for (const [key, value] of Object.entries(shape)) {
+    (newShape as any)[`${prefix}.${key}`] = value;
+  }
+
+  return z.object(newShape);
+};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

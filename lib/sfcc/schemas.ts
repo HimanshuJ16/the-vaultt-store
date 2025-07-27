@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { prefixSchema } from "./utils";
+import { prefixSchema } from "../utils";
 
 // Base schema for address information
 export const addressFormSchema = z.object({

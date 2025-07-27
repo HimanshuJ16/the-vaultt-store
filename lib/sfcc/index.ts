@@ -707,33 +707,6 @@ export async function clearCartAfterPayment(userId: string): Promise<void> {
   }
 }
 
-export async function getCheckoutOrder(orderId: string): Promise<Order | null> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { items: { include: { product: { include: { images: true } } } } },
-  })
-
-  if (!order) return null
-
-  return {
-    ...order,
-    lines: order.items.map((item) => ({
-      ...item,
-      cost: { totalAmount: { amount: item.totalAmount.toString(), currencyCode: "INR" } },
-      merchandise: { ...item.product, selectedOptions: [] },
-    })),
-    cost: {
-      subtotalAmount: {
-        amount: (order.totalAmount - order.shippingAmount - order.totalTaxAmount).toString(),
-        currencyCode: "INR",
-      },
-      totalAmount: { amount: order.totalAmount.toString(), currencyCode: "INR" },
-      totalTaxAmount: { amount: order.totalTaxAmount.toString(), currencyCode: "INR" },
-      shippingAmount: { amount: order.shippingAmount.toString(), currencyCode: "INR" },
-    },
-  }
-}
-
 export async function revalidate(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.searchParams.get("path")
 
